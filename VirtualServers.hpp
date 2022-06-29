@@ -12,7 +12,7 @@
 #include <errno.h>
 #include <algorithm>
 
-# define BUFFER 1024
+# define BUFFER 1000
 # define MAX_REQ 1024
 
 #define CGI_TIME_OUT 2000000
@@ -25,7 +25,8 @@ namespace webserve
             /* data */
             std::vector<Server> _servers;
             std::map<int, webserve::Socket*> _sockets;
-            std::vector<webserve::Request> _request;
+            std::vector<webserve::Request> _requests;
+            std::map<int, webserve::Response> _responses;
             std::vector<int> _fdsize;
             fd_set _current_read_socket, _read_socket;
             fd_set _current_write_socket, _write_socket;
@@ -35,9 +36,11 @@ namespace webserve
             int accept_new_connection(int socket_index)
             {
                 int new_socket;
-                new_socket = accept(socket_index,
+                if ((new_socket = accept(socket_index,
                                 (struct sockaddr *)_sockets.find(socket_index)->second->getAddress(),
-                                (socklen_t*)_sockets.find(socket_index)->second->getSizeofAddress());
+                                (socklen_t*)_sockets.find(socket_index)->second->getSizeofAddress())) < 0)
+                        std::cout << "accept error" << std::endl;
+                std::cout << "accepte is done" << std::endl;
                 return new_socket;
             }
 
@@ -58,7 +61,36 @@ namespace webserve
                 
             }
 
-            void    print_request(std::string const& str)
+            Server _match_server(int new_socket)
+            {
+                std::vector<Server> match;
+                for (size_t i = 0; i < _servers.size(); i++ ) {
+                    for (size_t j = 0; j < _servers[i]._server_names.size() ; j++) {
+                        if (_requests[new_socket].getHost() == _servers[i]._server_names[j]) {
+                            match.push_back(_servers[i]);
+                        }
+                    }
+                }
+                if (match.size() == 1) {
+                    return match[0];
+                } 
+                else if (match.size() == 0) {
+                    for (size_t i = 0; i < _servers.size(); i++) {
+                        if (_requests[new_socket].getPort() == _servers[i]._port) {
+                            return _servers[i];
+                        }
+                    }
+                    return _servers[0];
+                }
+                for (size_t i = 0; i < match.size(); i++) {
+                    if (_requests[new_socket].getPort() == match[i]._port) {
+                        return match[i];
+                    }
+                }
+                return match[0];
+            }
+
+            void    print_requests(std::string const& str)
             {
                 for (int i = 0; i < str.length(); i++)
                 {
@@ -95,7 +127,7 @@ namespace webserve
                 _servers = p.parsing();
                 _fd_max_size = 0;
                 _fd_min_size = INT32_MAX;
-                _request.insert(_request.begin(), MAX_REQ, webserve::Request());
+                _requests.insert(_requests.begin(), MAX_REQ, webserve::Request());
                 try
                 {
                     _init_fd_set();
@@ -108,7 +140,7 @@ namespace webserve
                         fcntl(tmp->getSocketFd(), F_SETFL, O_NONBLOCK);
                         FD_SET(tmp->getSocketFd(), &_current_read_socket);
                         _fd_max_size = std::max(tmp->getSocketFd(), _fd_max_size);
-                        _fd_min_size = std::max(tmp->getSocketFd(), _fd_min_size);
+                        _fd_min_size = std::min(tmp->getSocketFd(), _fd_min_size);
                         _fdsize.push_back(tmp->getSocketFd());
                     }
                 }
@@ -117,6 +149,7 @@ namespace webserve
                     std::cerr << e << std::endl;
                 }
             }
+
             ~VirtualServers() 
             {
                 std::map<int, webserve::Socket*>::iterator it = _sockets.begin();
@@ -136,6 +169,7 @@ namespace webserve
                 std::string s;
                 char buffer[BUFFER] = {0};
                 int valread;
+                int max_servers_fd = _fd_max_size;
                 while (true)
                 {
                     bzero(buffer, BUFFER);
@@ -155,7 +189,7 @@ namespace webserve
                         // check for reading sockets
                         if (FD_ISSET(i, &_read_socket))
                         {
-                            if (_sockets.find(i) == _sockets.end())
+                            if (i <= max_servers_fd)
                             {
                                 if ((new_socket = accept_new_connection(i)) < 0)
                                     continue;
@@ -168,20 +202,54 @@ namespace webserve
                             }
                             else 
                                 new_socket = i;
-                            if (fcntl(new_socket, F_SETFL, O_NONBLOCK) == -1){
+                            if (fcntl(new_socket, F_SETFL, O_NONBLOCK) == -1)
                                 continue;
-                            }
                             valread = read(new_socket, buffer, BUFFER);
                             if (valread > 0){
                                 s = std::string(buffer, valread);
                                 fd_with_time[new_socket] = get_current_time();
                             }
-                            else if (valread == 0){
+                            else if (valread == 0)
                                 s = "";
+                            else 
+                            { //? remove client in error
+                                _requests[new_socket].clear();
+                                _responses[new_socket].getRequest().clear();
+                                if (FD_ISSET(new_socket, &_read_socket))
+                                    FD_CLR(new_socket, &_current_read_socket);
+                                else if (FD_ISSET(new_socket, &_write_socket))
+                                    FD_CLR(new_socket, &_current_write_socket);
+                                fd_with_time.erase(i);
+                                continue;
                             }
-                            else{ //? remove client in error
-                                //_request[new_socket].clear();
-                                //fd_with_response_object[new_socket].get_request().clear();
+                            _requests[new_socket].append(s, valread);
+                            if (_requests[new_socket].isRequestComplete() && valread != -1)
+                            {
+                                _responses[new_socket] = Response(_requests[new_socket], _match_server(new_socket));
+                                _responses[new_socket].process();
+                                FD_CLR(new_socket, &_current_read_socket);
+                                FD_SET(new_socket, &_current_write_socket);
+                            }
+                            
+                        }
+                        if (FD_ISSET(i, &_write_socket))
+                        {
+                        //? for first time save length and size of the file;
+                            new_socket = i;
+                            bzero(buffer, BUFFER);
+                            int fd = _responses[new_socket].getFd();
+                            valread =  read(fd, buffer, BUFFER);
+                            int sended = 0;
+                            if (valread != -1)
+                                sended = send(new_socket, buffer, valread, 0);
+                            if (sended > 0){
+                                fd_with_time[new_socket] = get_current_time();
+                                _responses[new_socket].update_size_sended(sended);
+                            }
+                            //? remove client in error in sendig
+                            if (sended  == -1 ){
+                                _requests[new_socket].clear();
+                                _responses[new_socket].getRequest().clear();
                                 if (FD_ISSET(new_socket, &_read_socket)){
                                     FD_CLR(new_socket, &_current_read_socket);
                                 }
@@ -191,80 +259,46 @@ namespace webserve
                                 fd_with_time.erase(i);
                                 continue;
                             }
-                            _request[new_socket].append(s, valread);
-                            // if (v_of_request_object[new_socket].isRequestCompleted() && valread != -1){
-                            //     // fd_with_response_object[new_socket] = Response(v_of_request_object[new_socket]);
-                            //     // fd_with_response_object[new_socket].handleRequest(v_of_request_object[new_socket].setServer(all_servers));
-                            //     FD_CLR(new_socket, &_fd_set_read);
-                            //     FD_SET(new_socket, &_fd_set_write);
+                            //? move the pointer of the file to send all the file 
+                            if (valread != sended && fd != -1 && valread > 0){
+                                int defferent = valread - sended;
+                                if (defferent > 0)
+                                    lseek(fd, -defferent ,SEEK_CUR);
                             }
-                            
+
+
+
+                            if (valread <= 0 && sended == 0){ //? after finish sending all responce
+                                close(_responses[new_socket].getFd());
+                                unlink(_responses[new_socket].getFilepath().c_str());
+
+                                // _responses[new_socket].reset();
+                                if (_requests[new_socket].isKeepAlive() == false){
+                                    FD_CLR(new_socket, &_current_write_socket);
+                                    close(new_socket);
+                                    _fd_max_size = _fdsize[0];
+                                    int index = 0;
+                                    for (size_t i = 0; i < _fdsize.size(); i++){
+                                        if (_fdsize[i] == new_socket){
+                                            index = i;
+                                            continue;
+                                        }
+                                        _fd_max_size = std::max(_fdsize[i], _fd_max_size);
+                                    }
+                                    if (index != 0)
+                                        _fdsize.erase(_fdsize.begin() + index);
+                                }
+                                else{
+                                    FD_CLR(new_socket, &_current_write_socket);
+                                    FD_SET(new_socket, &_current_read_socket);
+                                }
+                                _requests[new_socket].clear();
+                                _responses[new_socket].getRequest().clear();
+                                fd_with_time.erase(new_socket); //? check if true
+                            }
                         }
-                        // if (FD_ISSET(i, &_write_socket)){
-                        // //? for first time save length and size of the file;
-                        //     new_socket = i;
-                        //     bzero(buffer, BUFFER);
-                        //     int fd = fd_with_response_object[new_socket].get_fd();
-                        //     valread =  read(fd, buffer, BUFFER);
-                        //     int sended = 0;
-                        //     if (valread != -1)
-                        //         sended = send(new_socket, buffer, valread, 0);
-                        //     if (sended > 0){
-                        //         fd_with_time[new_socket] = get_current_time();
-                        //         fd_with_response_object[new_socket].update_size_sended(sended);
-                        //     }
-                        //     //? remove client in error in sendig
-                        //     if (sended  == -1 ){
-                        //         v_of_request_object[new_socket].clear();
-                        //         fd_with_response_object[new_socket].get_request().clear();
-                        //         if (FD_ISSET(new_socket, &_fd_set_read_temp)){
-                        //             FD_CLR(new_socket, &_fd_set_read);
-                        //         }
-                        //         else if (FD_ISSET(new_socket, &_fd_set_write_temp)){
-                        //             FD_CLR(new_socket, &_fd_set_write);
-                        //         }
-                        //         fd_with_time.erase(i);
-                        //         continue;
-                        //     }
-                        //     //? move the pointer of the file to send all the file 
-                        //     if (valread != sended && fd != -1 && valread > 0){
-                        //         int defferent = valread - sended;
-                        //         if (defferent > 0)
-                        //             lseek(fd, -defferent ,SEEK_CUR);
-                        //     }
-
-
-
-                        //     if (valread <= 0 && sended == 0){ //? after finish sending all responce
-                        //         close(fd_with_response_object[new_socket].get_fd());
-                        //         unlink(fd_with_response_object[new_socket].get_file_path().c_str());
-
-                        //         fd_with_response_object[new_socket].reset();
-                        //         if (v_of_request_object[new_socket]._isKeepAlive() == false){
-                        //             FD_CLR(new_socket, &_fd_set_write);
-                        //             close(new_socket);
-                        //             fd_max = fds[0];
-                        //             int index = 0;
-                        //             for (size_t i = 0; i < fds.size(); i++){
-                        //                 if (fds[i] == new_socket){
-                        //                     index = i;
-                        //                     continue;
-                        //                 }
-                        //                 fd_max = std::max(fds[i], fd_max);
-                        //             }
-                        //             if (index != 0)
-                        //                 fds.erase(fds.begin() + index);
-                        //         }
-                        //         else{
-                        //             FD_CLR(new_socket, &_fd_set_write);
-                        //             FD_SET(new_socket, &_fd_set_read);
-                        //         }
-                        //         v_of_request_object[new_socket].clear();
-                        //         fd_with_response_object[new_socket].get_request().clear();
-                        //         fd_with_time.erase(new_socket); //? check if true
-                        //     }
-                        // }
                     }
+                }
             }
     };
     

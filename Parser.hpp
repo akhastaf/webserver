@@ -151,9 +151,10 @@ namespace webserve
         
         void    Statment_location(webserve::Location& location)
         {
-            if (_lookahead.type == "CLINET_BODY_MAX_SIZE")
-                Client_max_body_size_statment(location._max_client_body_size);
-            else if (_lookahead.type == "ERROR_PAGE")
+            // if (_lookahead.type == "CLINET_BODY_MAX_SIZE")
+            //     Client_max_body_size_statment(location._max_client_body_size);
+            // else 
+            if (_lookahead.type == "ERROR_PAGE")
                 Error_page_statment(location._error_pages);
             else if (_lookahead.type == "INDEX")
                 Index_statment(location._index);
@@ -235,12 +236,13 @@ namespace webserve
             
         }
       
-        void Client_max_body_size_statment(std::string& cmbs)
+        void Client_max_body_size_statment(int& cmbs)
         {
             try
             {
                 _eat("CLINET_BODY_MAX_SIZE");
-                cmbs = _eat("NUMBER").value + _eat("STRING").value;
+                cmbs = std::stoi(_eat("NUMBER").value);
+                // _eat("STRING").value;
                 _eat(";");
             }
             catch(const std::string& e)
@@ -251,7 +253,7 @@ namespace webserve
         }
 
         
-        void Error_page_statment(std::vector<std::pair<int, std::string> > &error_page)
+        void Error_page_statment(std::map<int, std::string> &error_page)
         {
             std::vector<int> numbers;
             std::string path;
@@ -265,7 +267,7 @@ namespace webserve
                 path = _eat("STRING").value;
                 for (size_t i = 0; i < numbers.size(); i++)
                 {
-                    error_page.push_back(std::make_pair(numbers[i], path));
+                    error_page.insert(std::make_pair(numbers[i], path));
                 }
                 _eat(";");
             }

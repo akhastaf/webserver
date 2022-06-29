@@ -23,11 +23,11 @@ namespace webserve
             _index.push_back("index.html");
         }
         ~Location() {}
-        std::string _max_client_body_size;
+        int _max_client_body_size;
         std::string _cgi_pass;
         std::vector<std::string> _cgi_ext;
         std::vector<std::string> _index;
-        std::vector<std::pair<int, std::string> > _error_pages;
+        std::map<int, std::string> _error_pages;
         bool _autoindex;
         std::string _root;
         std::vector<std::string> _allowed_methods;
@@ -43,7 +43,7 @@ namespace webserve
                 _server_names.push_back("");
                 _autoindex = false;
                 _root = "html";
-                _max_client_body_size = "1M";
+                _max_client_body_size = 1;
                 _allowed_methods.push_back("GET");
                 _allowed_methods.push_back("POST");
                 _allowed_methods.push_back("DELETE");
@@ -55,8 +55,8 @@ namespace webserve
             int _port;
             std::vector<std::string> _server_names;
             std::vector<std::string> _index;
-            std::vector<std::pair<int, std::string> > _error_pages;
-            std::string _max_client_body_size;
+            std::map<int, std::string> _error_pages;
+            int _max_client_body_size;
             bool _autoindex;
             std::string _root;
             std::pair<int, std::string> _redirection;
@@ -77,8 +77,8 @@ namespace webserve
             o << s._index[i] << " ";
         o << std::endl;
         o << "error_pages : " << std::endl;
-        for (size_t i = 0; i < s._error_pages.size(); i++)
-            o << "number " << s._error_pages[i].first << " page " << s._error_pages[i].second << std::endl;
+        for (std::map<int, std::string>::iterator it = s._error_pages.begin(); it != s._error_pages.end(); it++)
+            o << "number " << it->first << " page " << it->second << std::endl;
         o << "max_client_body_size : " << s._max_client_body_size << std::endl;
         o << "autoindex : " << s._autoindex << std::endl;
         o << "root : " << s._root << std::endl;
@@ -101,8 +101,8 @@ namespace webserve
                 o << s._locations[i].second._index[j] << " ";
             o << std::endl;
             o << "error_pages : " << std::endl;
-            for (size_t j = 0; j < s._locations[i].second._error_pages.size(); j++)
-                o << "number " << s._locations[i].second._error_pages[j].first << " page " << s._locations[i].second._error_pages[j].second << std::endl;
+            for (std::map<int, std::string>::iterator it = s._locations[i].second._error_pages.begin(); it != s._locations[i].second._error_pages.end(); it++)
+                o << "number " << it->first << " page " << it->second << std::endl;
             o << "max_client_body_size : " << s._locations[i].second._max_client_body_size << std::endl;
             o << "autoindex : " << s._locations[i].second._autoindex << std::endl;
             o << "root : " << s._locations[i].second._root << std::endl;

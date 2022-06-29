@@ -71,6 +71,34 @@ namespace webserve
             return tmp;
         }
 
+        void _firstLine(std::map<std::string, std::vector<std::string> >& headerFields)
+        {
+            std::vector<std::string> filedvalue;
+            std::string method = _eat("STRING").value;
+            std::string uri = _eat("STRING").value;
+            std::string version = _eat("STRING").value;
+            size_t pos;
+            std::string query;
+            if ((pos = uri.find("?")) != std::string::npos) 
+            {
+                query = uri.substr(pos + 1);
+                uri = uri.substr(0, pos);
+            }
+            _eat("CRLF");
+            filedvalue.push_back(version);
+            headerFields.insert(std::make_pair("Version", filedvalue));
+            filedvalue.clear();
+            filedvalue.push_back(method);
+            headerFields.insert(std::make_pair("Method", filedvalue));
+            filedvalue.clear();
+            filedvalue.push_back(uri);
+            headerFields.insert(std::make_pair("Uri", filedvalue));
+            filedvalue.clear();
+            filedvalue.push_back(query);
+            headerFields.insert(std::make_pair("Query", filedvalue));
+            filedvalue.clear();
+        }
+
     public:
         RequestParser(std::string const &text) : _tokenizer(text)
         {
@@ -89,7 +117,7 @@ namespace webserve
         std::map<std::string, std::vector<std::string> > parsing()
         {
             std::map<std::string, std::vector<std::string> > headerFields;
-
+            _firstLine(headerFields);
             // while (_lookahead.type != "NULL")
             // {
             //     std::cout << "Type " << _lookahead.type << " Value " << _lookahead.value << std::endl;
