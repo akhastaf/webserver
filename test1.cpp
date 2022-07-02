@@ -1,6 +1,7 @@
 #include "VirtualServers.hpp"
 #include "Response.hpp"
 #include "Request.hpp"
+#include "MimeTypes.hpp"
 
 
 int main(int ac, char **av)
@@ -11,7 +12,9 @@ int main(int ac, char **av)
         
     try
     {
+        webserve::MimeTypes::set();
         webserve::VirtualServers virtual_servers(filename);
+        
         virtual_servers.connect();
     }
     catch(const std::string& e)

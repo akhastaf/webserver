@@ -19,6 +19,7 @@ namespace webserve
             int _isHeaderComplete;
             size_t _bodysize;
             std::string _filename;
+            std::string _path;
             std::string _host;
             int _port;
             bool _isComplete;
@@ -29,7 +30,10 @@ namespace webserve
             {
                 *this = req;
             }
-            ~Request() {}
+            ~Request() 
+            {
+                // unlink(_path.c_str());
+            }
             Request& operator= (Request const& req)
             {
                 _rawRequest = req._rawRequest;
@@ -40,6 +44,7 @@ namespace webserve
                 _host = req._host;
                 _port = req._port;
                 _isComplete = req._isComplete;
+                _path = req._path;
                 return *this;
             }
 
@@ -53,6 +58,8 @@ namespace webserve
                 _host.clear();
                 _bodysize = 0;
                 _filename.clear();
+                _path.clear();
+                unlink(_path.c_str());
             }
 
             void append(std::string str, size_t len) 
@@ -92,10 +99,11 @@ namespace webserve
                 if (_filename.empty())
                 {
                     time(&t);
-                    _filename = "/tmp/" + std::to_string(t);
+                    _filename = std::to_string(t);
+                    _path = "/tmp/" + _filename;
                     std::cout << "filename : " << _filename << std::endl;
                 }
-                file.open(_filename, std::ofstream::app);
+                file.open(_path, std::ofstream::app);
                 file << str;
                 file.close();
                 _bodysize += str.length();
@@ -163,6 +171,10 @@ namespace webserve
             {
                 return _filename;
             }
+            std::string getPath() const
+            {
+                return _path;
+            }
             std::string getHost() const
             {
                 return _host;
@@ -184,6 +196,25 @@ namespace webserve
             {
                 if (has("Transfer-Encoding"))
                     return get("Transfer-Encoding").front();
+                return std::string();
+            }
+            std::string getContentType()
+            {
+                if (has("Content-Type"))
+                    return get("Content-Type").front();
+                return std::string();
+            }
+            std::string getUri()
+            {
+                if (has("Uri"))
+                    return get("Uri").front();
+                return std::string();
+            }
+            
+            std::string getMethod()
+            {
+                if (has("Method"))
+                    return get("Method").front();
                 return std::string();
             }
             

@@ -20,6 +20,7 @@ namespace webserve
             _allowed_methods.push_back("POST");
             _allowed_methods.push_back("DELETE");
             _root = "html";
+            _max_client_body_size = -1;
             _index.push_back("index.html");
         }
         ~Location() {}
@@ -114,6 +115,30 @@ namespace webserve
         }
         return o;
     } 
+    std::ostream& operator<< (std::ostream& o, Location location)
+    {
+        o << "cgi_pass : " << location._cgi_pass << std::endl;
+        o << "cgi_ext :" << location._cgi_pass;
+        for (size_t i = 0; i < location._cgi_ext.size(); i++)
+            o << " " << location._cgi_pass << std::endl;
+        o << std::endl;
+        o << "index : ";
+        for (size_t j = 0; j < location._index.size(); j++)
+            o << location._index[j] << " ";
+        o << std::endl;
+        o << "error_pages : " << std::endl;
+        for (std::map<int, std::string>::iterator it = location._error_pages.begin(); it != location._error_pages.end(); it++)
+            o << "number " << it->first << " page " << it->second << std::endl;
+        o << "max_client_body_size : " << location._max_client_body_size << std::endl;
+        o << "autoindex : " << location._autoindex << std::endl;
+        o << "root : " << location._root << std::endl;
+        o << "return number : " << location._redirection.first << " location " << location._redirection.second << std::endl;
+        o << "allowed_methods : ";
+        for (size_t j = 0; j < location._allowed_methods.size(); j++)
+            o << location._allowed_methods[j] << " ";
+        o << std::endl;
+        return o;
+    }
 
     
 };
