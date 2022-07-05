@@ -27,7 +27,7 @@ namespace webserve
                 if (t.type == "NULL")
                     std::cerr <<  ("Unexpected end of input, expected : " + token_type) << std::endl;
                 if (t.type != token_type)
-                     std::cerr <<  ("Unexpected token : " + t.type + ", expected : " + token_type) << std::endl;
+                     std::cerr <<  ("Unexpected token : " + t.type + ", expected : " + token_type) << " value" << t.value << std::endl;
                 _lookahead = _tokenizer.get_next_token();
             }
             catch (std::string& e)

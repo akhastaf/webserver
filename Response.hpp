@@ -15,7 +15,8 @@
 #include <sys/stat.h>
 #include <algorithm>
 #include <dirent.h>
-
+#include <arpa/inet.h>
+# include "VirtualServers.hpp"
 #define CRLF "\r\n"
 
 namespace webserve 
@@ -29,16 +30,19 @@ namespace webserve
             webserve::Location _location;
             int _fd;
             std::string _filepath;
+            std::string _cgi_path;
             size_t _size_sended;
             bool _locationFound;
+            std::string _contentFile;
+
+            
             
             void _create_file()
             {
-                struct timeval tp;
-                gettimeofday(&tp, NULL);
-                long int us = tp.tv_sec * 1000000 + tp.tv_usec;
-                std::string file_name =   std::to_string(us);
-                std::string filepath = "/tmp/autoindex_" + file_name;
+                time_t t;
+                time(&t);
+                std::string file_name = "response_" + std::to_string(t);
+                std::string filepath = "/tmp/" + file_name;
                 std::ofstream out(filepath);
                 _filepath = filepath;
                 out << _response;
@@ -212,7 +216,7 @@ namespace webserve
                 _response = "HTTP/1.1 " + std::to_string(status) + " " + _getStatusdescription(status).c_str() + "\r\n";
                 _response += "Server: webserver\r\n";
                 _response += "Content-Length: " + std::to_string(body.length()) + "\r\n";
-	            _response += "Connection: close\r\n\r\n";
+	            _response += "Connection: keep-alive\r\n\r\n";
                 _response += body;
                 _response += "\r\n\r\n";
             }
@@ -226,7 +230,7 @@ namespace webserve
                 _response = "HTTP/1.1 " + std::to_string(status) + " " + _getStatusdescription(status).c_str() + "\r\n";
                 _response += "Server: webserver\r\n";
                 _response += "Content-Length: " + std::to_string(s.st_size) + "\r\n";
-	            _response += "Connection: close\r\n\r\n";
+	            _response += "Connection: keep-alive\r\n\r\n";
                 fd = open(path.c_str(), O_RDONLY);
                 fcntl(fd, F_SETFL, O_NONBLOCK);
                 char buffer[s.st_size];
@@ -419,12 +423,12 @@ namespace webserve
 
             std::string _getTimeForAutoIndex(time_t * time)
             {
-                char buffer[12];
+                char buffer[20];
                 struct tm* t;
                 std::string timeString;
                 std::string hours = std::ctime(time);
                 t = std::gmtime(time);
-                std::strftime(buffer, 12, "%d-%b-%Y", t);
+                std::strftime(buffer, 20, "%d-%b-%Y ", t);
                 timeString = buffer;
                 timeString += hours.substr(10, 6);
                 return timeString;
@@ -433,10 +437,10 @@ namespace webserve
             std::string _getfileInfoForAutoIndex(std::string filename, std::string path)
             {
                 struct stat s;
-                std::string filepath = _request.getUri() + filename;
-                std::string fileinfo = "<div><a href=\"" + _request.getHost() + ":" + std::to_string(_server._port) + filepath + "\">" + filename + "</a></div>";
-                path += filename;
                 stat(path.c_str(), &s);
+                std::string filepath = _request.getUri() + filename;
+                std::string fileinfo = "<div><a href=\"" + filepath + "\">" + filename + "</a></div>";
+                path += filename;
                 fileinfo += "                 " + _getTimeForAutoIndex(&s.st_mtimespec.tv_sec);
                 if (s.st_mode & S_IFREG)
                     fileinfo += "                 " + std::to_string(s.st_size);
@@ -468,7 +472,7 @@ namespace webserve
                     _response = "HTTP/1.1 200 " + _getStatusdescription(200) + "\r\n";
                     _response += "Server: webserver\r\n";
                     _response += "Content-Length: " + std::to_string(body.length()) + "\r\n";
-                    _response += "Connection: close\r\n\r\n";
+                    _response += "Connection: " + _request.get("Connection").front() + "\r\n\r\n";
                     _response += body;
                     _response += "\r\n\r\n";
                     closedir(dir);
@@ -533,16 +537,19 @@ namespace webserve
                 fcntl(fd, F_SETFL, O_NONBLOCK);
                 if (fd == -1)
                     return _notFound();
-                _response = "HTTP/1.1 200 " + _getStatusdescription(200) + "\r\n";
+                if (type !="CGI/Content")
+                    _response = "HTTP/1.1 200 " + _getStatusdescription(200) + "\r\n";
                 _response += "Server: webserver\r\n";
                 if (S_ISREG(s.st_mode) && !type.length())
                 {
                     std::string file_name = path.substr(path.find_last_of('/') + 1, path.size());
                     _response += "Content-Disposition: attachement; filename=" + file_name + "\r\n";
                 }
-                if (type.length())
-			        _response += "Content-Type: " + type + "\r\n";	
-                _response += "Content-Length: " + std::to_string(s.st_size) + "\r\n\r\n";
+                if (type.length() && type !="CGI/Content")
+			        _response += "Content-Type: " + type + "\r\n";
+                _response += "Connection: close\r\n";	
+                if (type !="CGI/Content")
+                    _response += "Content-Length: " + std::to_string(s.st_size) + "\r\n\r\n";
                 char buffer[1000];
                 int reading = 0;
                 while((reading = read(fd, buffer, 1000)) > 0){
@@ -573,12 +580,14 @@ namespace webserve
                     mv += "." + extention;
                 std::cout << "realpath " << realPath << " path " << path << std::endl;
                 std::cout << mv << std::endl;
+                // mv = (path + filename);
+
                 int r = system(mv.c_str());
+                perror("errr");
                 if (r != -1)
                     _response += "HTTP/1.1 201 " + _getStatusdescription(201) + "\r\n";
                 else
                     _response += "HTTP/1.1 409 " + _getStatusdescription(409) + "\r\n";
-                // _response += "Date: " + std::string(ctime(&rawtime));
                 _response += "Server: webserver\r\n";
                 _response += "Content-Length: 0\r\n";
                 _response +=  "Connection: close\r\n";
@@ -618,8 +627,160 @@ namespace webserve
                 _create_file();
             }
 
+            bool _locationHasCGI()
+            {
+                size_t pos;
+                std::string extention; 
+                if ((pos = _request.getUri().find_last_of(".")) != std::string::npos)
+                    extention = _request.getUri().substr(pos + 1);
+                if (_locationFound && extention.size() && _location._cgi_pass.count(extention))
+                {
+                   _cgi_path = _location._cgi_pass.find(extention)->second;
+                   return true;
+                }
+                return false;
+
+            }
+
+            std::string _convertHTTPFiled(std::string filed)
+            {
+                size_t pos;
+                for (int i = 0; i < filed.size(); i++)
+                {
+                    filed[i] = (char)std::toupper(filed[i]);
+                    if (filed[i] == '-')
+                        filed[i] = '_';
+                }
+                return filed;
+            }
+
+            char** _setCGIMetaVariables(std::string path)
+            {
+                struct sockaddr_in* addr = (struct sockaddr_in*)_request.getAddress();
+                std::vector<std::string> variables;
+                char ip[INET_ADDRSTRLEN];
+                inet_ntop( AF_INET, &addr->sin_addr, ip, INET_ADDRSTRLEN );
+                std::string remoteAddr = "REMOTE_ADDR=";
+                remoteAddr += ip;
+                variables.push_back("AUTH_TYPE=");
+                variables.push_back("CONTENT_LENGTH=" + _request.getContentLength());
+                variables.push_back("CONTENT_TYPE=" + _request.getContentType());
+                variables.push_back("GATEWAY_INTERFACE=CGI/1.1");
+                variables.push_back("PATH_INFO=" + _request.getUri());
+                variables.push_back("PATH_TRANSLATED=");
+                variables.push_back("QUERY_STRING=" + _request.getQuery());
+                variables.push_back(remoteAddr);
+                variables.push_back("REMOTE_HOST=");
+                variables.push_back("REMOTE_IDENT=");
+                variables.push_back("REMOTE_USER=" + _request.getUserAgent());
+                variables.push_back("REQUEST_METHOD=" + _request.getMethod());
+                variables.push_back("SCRIPT_NAME=");
+                variables.push_back("SCRIPT_FILENAME=" + path);
+                variables.push_back("SERVER_NAME=Webserver");
+                variables.push_back("SERVER_PORT=" + std::to_string(_request.getPort()));
+                variables.push_back("SERVER_PROTOCOL=HTTP/1.1");
+                variables.push_back("SERVER_SOFTWARE=" + _cgi_path);
+                variables.push_back("REDIRECT_STATUS=200");
+                variables.push_back("DOCUMENT_URI=" + _request.getUri());
+                std::map<std::string, std::vector<std::string> >::iterator it = _request.getRequest().begin();
+                std::string str;
+                for (; it != _request.getRequest().end(); it++)
+                {
+                    str = "HTTP_" + _convertHTTPFiled(it->first) + "= ";
+                    for (int i = 0; i < it->second.size(); i++)
+                    {
+                        str += it->second[i];
+                        if (i + 1 < it->second.size())
+                            str += ", ";
+                    }
+                    variables.push_back(str);
+                }
+                char ** vars = new char*[variables.size() + 1];
+                int i;
+                for (i = 0; i < variables.size(); i++)
+                    vars[i] = strdup(variables[i].c_str());
+                vars[i] = NULL;
+                return vars;
+            }
+
+            void    _cgi(std::string path)
+            {
+                std::cout << "cgi founded : " << _cgi_path << " " << path << std::endl;
+                char **meta_variables = _setCGIMetaVariables(path);
+                time_t t;
+                time(&t);
+                std::string filename = "/tmp/cgi_" + std::to_string(t) + ".cgi";
+                std::cout << filename << std::endl;
+                char *args[3];
+                args[0] = (char *)_cgi_path.c_str();
+                args[1] = (char *)_request.getUri().c_str();
+                args[2] = NULL;
+                int fdout = open(filename.c_str(), O_RDWR | O_CREAT , S_IRWXU | S_IRWXG);
+                //fcntl(fdout, F_SETFL, O_NONBLOCK);
+                pid_t pid = fork();
+                std::string path_c = _request.getPath();
+                if (pid == 0)
+                {
+                    int fdin = open(path_c.c_str(), O_RDONLY);
+                    if (fdin == -1)
+                        perror("error");
+                    //fcntl(fdin, F_SETFL, O_NONBLOCK);
+                    // int r;
+                    // char b[1001];
+                    // while ((r = read(fdin, b, 1000)) > 0)
+                    // {
+                    //     b[r] = 0;
+                    //     std::cout << b << std::endl;
+                    // }
+                    // close(fdin);
+                    // fdin = open(path_c.c_str(), O_RDONLY);
+                    if (dup2(fdout, STDOUT_FILENO) < 0)
+                        perror("dup1");
+                    if (dup2(fdin, STDIN_FILENO) < 0)
+                        perror("dup2");
+                    execve(args[0], args, meta_variables);
+                    std::cerr << "execve is faild" << std::endl;
+                    return _internalError();
+                }
+                else
+                {
+                    while (waitpid(pid, NULL, WNOHANG) == 0)
+                        ;
+                    close(fdout);
+                    // return _badRequest();
+                }
+                char buffer[1000];
+                int r;
+                std::string out;
+                size_t pos, end;
+                fdout = open(filename.c_str(), O_RDONLY);
+                fcntl(fdout, F_SETFL, O_NONBLOCK);
+                while ((r = read(fdout, buffer, 1000)) > 0)
+                {
+                    out.append(buffer, r);
+                    if ((pos = out.find("\r\n\r\n", 0)) != std::string::npos)
+                        break;
+                }
+                struct stat s;
+                stat(filename.c_str(), &s);
+                int size = s.st_size - (pos + 4);
+                if ((pos = out.find("Status:")) == std::string::npos)
+                        _response = "HTTP/1.1 200 " + _getStatusdescription(200) + "\r\n";
+                else
+                {
+                    end = out.find("\r\n");
+                    std::string status_code = out.substr(pos + 7, end);
+                    _response = "HTTP/1.1 " + status_code + " " + _getStatusdescription(std::stoi(status_code)) + "\r\n";
+                }
+                _response += "Content-Length: " + std::to_string(size) + "\r\n";
+                close(fdout);
+                _loadResource(filename);
+            }
+
+
             void    _proccessGET(std::string uri)
             {
+                std::cout << "ProccessGet" << std::endl;
                 struct stat s;
                 std::string path;
                 if (_locationFound && _location._root.length())
@@ -632,16 +793,15 @@ namespace webserve
                 if (S_ISREG(s.st_mode))
                 {
                     std::cout << "is a file" << std::endl;
-                    // if (_locationHasCGI())
-                    //     _cgi();
-                    // else
+                    if (_locationHasCGI())
+                        return _cgi(path);
                     return _loadResource(path);
                 }
                 else if (S_ISDIR(s.st_mode))
                 {
                     std::cout << "is a dir" << std::endl;
                     if (path.back() != '/')
-                        return _redirectTo(301, _constructUri(_request.getUri() + "/"));
+                        return _redirectTo(301, _request.getUri() + "/");
                     else if (_hasIndexFiles(path))
                         return _loadResource(_getIndexFiles(path));
                     else if (_hasAutoIndex())
@@ -656,6 +816,7 @@ namespace webserve
 
             void    _proccessPOST(std::string uri)
             {
+                std::cout << "ProccessPOST" << std::endl;
                 struct  stat s;
                 std::string path;
                 if (_locationFound && _location._root.length())
@@ -663,16 +824,15 @@ namespace webserve
                 else
                     path = _server._root;
                 path += uri;
-                if (_hasUpload())
+                if (_hasUpload() && !_locationHasCGI())
                     return _upload();
                 if (stat(path.c_str(), &s) < 0)
                     return _notFound();
                 if (S_ISREG(s.st_mode))
                 {
                     std::cout << "is a file" << std::endl;
-                    // if (_locationHasCGI())
-                    //     _cgi();
-                    // else
+                    if (_locationHasCGI())
+                        return _cgi(path);
                     return _forbidden();
                 }
                 else if (S_ISDIR(s.st_mode))
@@ -694,6 +854,7 @@ namespace webserve
 
             void    _proccessDELETE(std::string uri)
             {
+                std::cout << "ProccessDELETE" << std::endl;
                 struct  stat s;
                 std::string path;
                 if (_locationFound && _location._root.length())
@@ -714,9 +875,8 @@ namespace webserve
                 if (S_ISREG(s.st_mode))
                 {
                     std::cout << "is a file" << std::endl;
-                    // if (_locationHasCGI())
-                    //     _cgi();
-                    // else
+                    if (_locationHasCGI())
+                        return _cgi(path);
                     return _deleteFile(path);
                 }
                 else if (S_ISDIR(s.st_mode))
@@ -794,6 +954,16 @@ namespace webserve
             Request& getRequest() { return _request; }
 
             void update_size_sended(long send) { _size_sended += send; }
+            void    reset()
+            {
+                _response.clear();
+                _request.clear();
+                _fd = -1;
+                _filepath.clear();
+                _cgi_path.clear();
+                _size_sended = 0;
+                _locationFound = false;
+            }
 
     };
     

@@ -23,9 +23,12 @@ namespace webserve
             std::string _host;
             int _port;
             bool _isComplete;
+            bool _isChunked;
+            struct sockaddr _address;
+            int _len_address;
 
         public:
-            Request() : _rawRequest(""), _isHeaderComplete(false), _bodysize(0), _filename("") {}
+            Request() : _rawRequest(""), _isHeaderComplete(false), _bodysize(0), _filename(""), _len_address(sizeof(_address)) {}
             Request(Request const& req) 
             {
                 *this = req;
@@ -45,6 +48,7 @@ namespace webserve
                 _port = req._port;
                 _isComplete = req._isComplete;
                 _path = req._path;
+                _isChunked = req._isChunked;
                 return *this;
             }
 
@@ -60,6 +64,11 @@ namespace webserve
                 _filename.clear();
                 _path.clear();
                 unlink(_path.c_str());
+            }
+
+            std::map<std::string, std::vector<std::string> >& getRequest()
+            {
+                return _request;
             }
 
             void append(std::string str, size_t len) 
@@ -89,9 +98,41 @@ namespace webserve
                         _isHeaderComplete = true;
                         return;
                     }
+                    if (has("Transfer-Encoding") && get("Transfer-Encoding").front() == "chunked")
+                        _isChunked = true;
+                    else
+                        _isChunked = false;
                     body(dst);
                 }
             }
+
+            // size_t  _getHex(std::string n)
+            // {
+            //     size_t num;
+            //     std::stringstream stream;
+            //     stream >> std::hex >> num;
+            //     return num;
+            // }
+
+            // std::string    _getChunkedBody(std::string str)
+            // {
+            //     size_t pos, start, end;
+            //     std::string body;
+            //     if ((start = str.find("\r\n")) == std::string::npos)
+            //         return str;
+            //     while ((start = str.find("\r\n")) != std::string::npos)
+            //     {
+            //         size_t _chunkedSize = _getHex(str.substr(0, start));
+            //         str.erase(0, start + 2);
+            //         end = str.find("\r\n");
+            //         body += str.substr()
+            //     }
+            //     body = str.substr(pos + 2);
+            //     if (body.length() == _chunkedSize)
+
+            //     return str.substr(pos + 2);
+            // }
+
             void body(std::string str)
             {
                 time_t t;
@@ -100,9 +141,11 @@ namespace webserve
                 {
                     time(&t);
                     _filename = std::to_string(t);
-                    _path = "/tmp/" + _filename;
-                    std::cout << "filename : " << _filename << std::endl;
+                    _path = "/tmp/_body" + _filename;
+                    std::cout << "filename : " << _path << std::endl;
                 }
+                // if (_isChunked)
+                //     str = _getChunkedBody(str);
                 file.open(_path, std::ofstream::app);
                 file << str;
                 file.close();
@@ -171,7 +214,7 @@ namespace webserve
             {
                 return _filename;
             }
-            std::string getPath() const
+            std::string& getPath()
             {
                 return _path;
             }
@@ -218,6 +261,49 @@ namespace webserve
                 return std::string();
             }
             
+            std::string getContentLength()
+            {
+                if (has("Content-Length"))
+                    return get("Content-Length").front();
+                return std::string();
+            }
+            std::string getQuery()
+            {
+                if (has("Query"))
+                    return get("Query").front();
+                return std::string();
+            }
+            std::string getCookies()
+            {
+                if (has("Cookie"))
+                    return get("Cookie").front();
+                return std::string();
+            }
+            
+            std::string getUserAgent()
+            {
+                std::string userAgent;
+                if (has("User-Agent"))
+                {
+                    for (int i = 0; i < get("User-Agent").size(); i++)
+                    {
+                        userAgent += get("User-Agent")[i];
+                        if (i + 1 < get("User-Agent").size())
+                            userAgent += ", ";
+                    }
+                    return userAgent;
+                }
+                return std::string();
+            }
+            
+            struct sockaddr* getAddress()
+            {
+                return &_address;
+            }
+            int* getLengthAddress()
+            {
+                return &_len_address;
+            }
             
     };
 } // namespace webserve

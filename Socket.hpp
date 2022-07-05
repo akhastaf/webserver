@@ -20,6 +20,8 @@ namespace webserve
                 //memset(_address.sin_zero, '\0', sizeof _address.sin_zero);
                 if ((_socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
                     throw ("socket  error");
+                const int enable = 1;
+                setsockopt(_socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
                 if (bind(_socket_fd, (struct sockaddr *)&_address, sizeof(_address)) < 0)
                 {
                     std::cout << _socket_fd << std::endl;

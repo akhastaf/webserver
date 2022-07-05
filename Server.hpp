@@ -25,8 +25,7 @@ namespace webserve
         }
         ~Location() {}
         int _max_client_body_size;
-        std::string _cgi_pass;
-        std::vector<std::string> _cgi_ext;
+        std::map<std::string,std::string> _cgi_pass;
         std::vector<std::string> _index;
         std::map<int, std::string> _error_pages;
         bool _autoindex;
@@ -39,7 +38,7 @@ namespace webserve
     {
             Server() 
             {
-                _port = 80;
+                _port = 8080;
                 _ip = "*";
                 _server_names.push_back("");
                 _autoindex = false;
@@ -90,37 +89,14 @@ namespace webserve
         o << std::endl;
         for (size_t i = 0; i < s._locations.size(); i++)
         {
-
             o << "Location : " << s._locations[i].first << std::endl;
-            o << "cgi_pass : " << s._locations[i].second._cgi_pass << std::endl;
-            o << "cgi_ext :" << s._locations[i].second._cgi_pass;
-            for (size_t i = 0; i < s._locations[i].second._cgi_ext.size(); i++)
-                o << " " << s._locations[i].second._cgi_pass[i] << std::endl;
-            o << std::endl;
-            o << "index : ";
-            for (size_t j = 0; j < s._locations[i].second._index.size(); j++)
-                o << s._locations[i].second._index[j] << " ";
-            o << std::endl;
-            o << "error_pages : " << std::endl;
-            for (std::map<int, std::string>::iterator it = s._locations[i].second._error_pages.begin(); it != s._locations[i].second._error_pages.end(); it++)
-                o << "number " << it->first << " page " << it->second << std::endl;
-            o << "max_client_body_size : " << s._locations[i].second._max_client_body_size << std::endl;
-            o << "autoindex : " << s._locations[i].second._autoindex << std::endl;
-            o << "root : " << s._locations[i].second._root << std::endl;
-            o << "return number : " << s._locations[i].second._redirection.first << " location " << s._locations[i].second._redirection.second << std::endl;
-            o << "allowed_methods : ";
-            for (size_t j = 0; j < s._locations[i].second._allowed_methods.size(); j++)
-                o << s._locations[i].second._allowed_methods[j] << " ";
-            o << std::endl;
+            // o << s._locations[i].second;
         }
         return o;
     } 
     std::ostream& operator<< (std::ostream& o, Location location)
     {
-        o << "cgi_pass : " << location._cgi_pass << std::endl;
-        o << "cgi_ext :" << location._cgi_pass;
-        for (size_t i = 0; i < location._cgi_ext.size(); i++)
-            o << " " << location._cgi_pass << std::endl;
+        // o << "cgi_pass : " << location._cgi_pass << std::endl;
         o << std::endl;
         o << "index : ";
         for (size_t j = 0; j < location._index.size(); j++)

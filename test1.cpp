@@ -4,6 +4,8 @@
 #include "MimeTypes.hpp"
 
 
+
+
 int main(int ac, char **av)
 {
     std::string filename = "test.conf";
@@ -14,7 +16,7 @@ int main(int ac, char **av)
     {
         webserve::MimeTypes::set();
         webserve::VirtualServers virtual_servers(filename);
-        
+        signal(SIGPIPE, SIG_IGN);        
         virtual_servers.connect();
     }
     catch(const std::string& e)

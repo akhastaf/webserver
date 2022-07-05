@@ -37,8 +37,8 @@ namespace webserve
             {
                 int new_socket;
                 if ((new_socket = accept(socket_index,
-                                (struct sockaddr *)_sockets.find(socket_index)->second->getAddress(),
-                                (socklen_t*)_sockets.find(socket_index)->second->getSizeofAddress())) < 0)
+                                (struct sockaddr *)_requests[socket_index].getAddress(),
+                                (socklen_t*)_requests[socket_index].getLengthAddress())) < 0)
                         std::cout << "accept error" << std::endl;
                 std::cout << "accepte is done" << std::endl;
                 return new_socket;
@@ -212,7 +212,7 @@ namespace webserve
                             else if (valread == 0)
                                 s = "";
                             else 
-                            { //? remove client in error
+                            { 
                                 _requests[new_socket].clear();
                                 _responses[new_socket].getRequest().clear();
                                 if (FD_ISSET(new_socket, &_read_socket))
@@ -234,7 +234,6 @@ namespace webserve
                         }
                         if (FD_ISSET(i, &_write_socket))
                         {
-                        //? for first time save length and size of the file;
                             new_socket = i;
                             bzero(buffer, BUFFER);
                             int fd = _responses[new_socket].getFd();
@@ -246,7 +245,6 @@ namespace webserve
                                 fd_with_time[new_socket] = get_current_time();
                                 _responses[new_socket].update_size_sended(sended);
                             }
-                            //? remove client in error in sendig
                             if (sended  == -1 ){
                                 _requests[new_socket].clear();
                                 _responses[new_socket].getRequest().clear();
@@ -259,7 +257,6 @@ namespace webserve
                                 fd_with_time.erase(i);
                                 continue;
                             }
-                            //? move the pointer of the file to send all the file 
                             if (valread != sended && fd != -1 && valread > 0){
                                 int defferent = valread - sended;
                                 if (defferent > 0)
@@ -268,7 +265,7 @@ namespace webserve
 
 
 
-                            if (valread <= 0 && sended == 0){ //? after finish sending all responce
+                            if (valread <= 0 && sended == 0){
                                 close(_responses[new_socket].getFd());
                                 unlink(_responses[new_socket].getFilepath().c_str());
 
@@ -294,7 +291,7 @@ namespace webserve
                                 }
                                 _requests[new_socket].clear();
                                 _responses[new_socket].getRequest().clear();
-                                fd_with_time.erase(new_socket); //? check if true
+                                fd_with_time.erase(new_socket);
                             }
                         }
                     }

@@ -1951,3 +1951,5 @@ VP9,video/VP9,[RFC-ietf-payload-vp9-16]
 jpg,image/jpg,
 mp3,audio/mp3,
 js,application/javascript,
+cgi,CGI/Content,
+txt,text/plain, 

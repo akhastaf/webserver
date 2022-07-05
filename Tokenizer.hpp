@@ -358,7 +358,7 @@ namespace webserve {
                 t.type = _specs[i].first;
                 t.value = std::string(_cursor, match);
                 _cursor = match;
-                std::cout << "type " << t.type << " value "  << t.value << std::endl;
+                // std::cout << "type " << t.type << " value "  << t.value << std::endl;
                 if (t.type == "STRING" && (t.value[0] == '\'' || t.value[0] == '"'))
                     t.value = t.value.substr(1, t.value.length() - 2);
                 return t;
