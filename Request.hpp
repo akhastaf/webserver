@@ -2,11 +2,15 @@
 # define REQUEST_HPP
 # include <string.h>
 # include <iostream>
+#include <sys/_types/_size_t.h>
 # include <vector>
 # include <map>
 # include <ctime>
 # include <fstream>
+# include <sstream>
 # include "RequestParser.hpp"
+# include "utils.hpp"
+
 
 
 namespace webserve
@@ -26,6 +30,8 @@ namespace webserve
             bool _isChunked;
             struct sockaddr _address;
             int _len_address;
+            bool _isKeepAlive;
+            std::string _body;
 
         public:
             Request() : _rawRequest(""), _isHeaderComplete(false), _bodysize(0), _filename(""), _len_address(sizeof(_address)) {}
@@ -49,6 +55,8 @@ namespace webserve
                 _isComplete = req._isComplete;
                 _path = req._path;
                 _isChunked = req._isChunked;
+                _isKeepAlive = req._isKeepAlive;
+                _body = req._body;
                 return *this;
             }
 
@@ -63,6 +71,7 @@ namespace webserve
                 _bodysize = 0;
                 _filename.clear();
                 _path.clear();
+                _body.clear();
                 unlink(_path.c_str());
             }
 
@@ -86,14 +95,13 @@ namespace webserve
                 if ((r = _rawRequest.find("\r\n\r\n")) != std::string::npos)
                 {
                     r += 4;
-                    dst = _rawRequest.substr(r);// std::string(_rawRequest, _rawRequest.length() - r);
+                    dst = _rawRequest.substr(r);
                     _isHeaderComplete = true;
                     _rawRequest.erase(r);
                     parse();
                     print();
                     if (!_request.count("Content-Length") || (has("Content-Length") && !std::stol(_request["Content-Length"][0])))
                     {
-                        std::cout << "no Content-Length" << std::endl;
                         _isComplete = true;
                         _isHeaderComplete = true;
                         return;
@@ -106,32 +114,38 @@ namespace webserve
                 }
             }
 
-            // size_t  _getHex(std::string n)
-            // {
-            //     size_t num;
-            //     std::stringstream stream;
-            //     stream >> std::hex >> num;
-            //     return num;
-            // }
+            size_t  _getHex(std::string n)
+            {
+                size_t num;
+                std::stringstream stream;
+                stream >> std::hex >> num;
+                stream.clear();
+                return num;
+            }
 
-            // std::string    _getChunkedBody(std::string str)
-            // {
-            //     size_t pos, start, end;
-            //     std::string body;
-            //     if ((start = str.find("\r\n")) == std::string::npos)
-            //         return str;
-            //     while ((start = str.find("\r\n")) != std::string::npos)
-            //     {
-            //         size_t _chunkedSize = _getHex(str.substr(0, start));
-            //         str.erase(0, start + 2);
-            //         end = str.find("\r\n");
-            //         body += str.substr()
-            //     }
-            //     body = str.substr(pos + 2);
-            //     if (body.length() == _chunkedSize)
+            bool    _getChunkedBody(std::string str)
+            {
+                size_t pos, tmp, len;
 
-            //     return str.substr(pos + 2);
-            // }
+                if ((pos = _body.find("0\r\n\r\n")) == std::string::npos)
+                    _body.append(str);
+                else
+                {
+                    pos = 0;
+                    while(true){
+                        tmp = _body.find("\r\n", pos);
+                        len = _getHex(_body.substr(pos, tmp - pos));
+                        _body.erase(pos, (tmp + 2) - pos);
+                        pos += len;
+                        _body.erase(pos, 2);
+                        
+                        if (len == 0)
+                            break;
+                    }
+                    _isComplete = true;
+                }
+                return false;
+            }
 
             void body(std::string str)
             {
@@ -140,12 +154,14 @@ namespace webserve
                 if (_filename.empty())
                 {
                     time(&t);
-                    _filename = std::to_string(t);
+                    _filename = toString(t);
                     _path = "/tmp/_body" + _filename;
                     std::cout << "filename : " << _path << std::endl;
                 }
-                // if (_isChunked)
-                //     str = _getChunkedBody(str);
+                if (_isChunked && !_getChunkedBody(str))
+                    return ;
+                if (_isChunked && _isComplete)
+                    str = _body;
                 file.open(_path, std::ofstream::app);
                 file << str;
                 file.close();
@@ -173,6 +189,10 @@ namespace webserve
                     _host = _host.substr(0, pos);
                 }
                 std::cout << "Host " << _host << " port " << _port << std::endl;
+                if (has("Connection") && get("Connection").front() == "keep-alive")
+                    _isKeepAlive = true;
+                else
+                    _isKeepAlive = false;
                 //print();
             }
             // std::vector<std::string>* getFiled(std::string const& filedName)
@@ -230,9 +250,10 @@ namespace webserve
             size_t getBodysize() const { return _bodysize; }
             bool isKeepAlive() 
             {
-                if (_request.count("Connection") && get("Connection").front() == "keep-alive")
-                    return true;
-                return false;
+                return _isKeepAlive;
+                // if (_request.count("Connection") && get("Connection").front() == "keep-alive")
+                //     return true;
+                // return false;
             }
 
             std::string getTransferEncoding()
@@ -243,8 +264,19 @@ namespace webserve
             }
             std::string getContentType()
             {
+                std::string type;
                 if (has("Content-Type"))
-                    return get("Content-Type").front();
+                {
+                    for (int i = 0; i < get("Content-Type").size(); i++)
+                    {
+                        type += get("Content-Type")[i];
+                        if (i + 1 < get("Content-Type").size() && get("Content-Type")[i].back() != ';')
+                            type += ", ";
+                        else if (i + 1 < get("Content-Type").size())
+                            type += " ";
+                    }
+                    return type;
+                }
                 return std::string();
             }
             std::string getUri()

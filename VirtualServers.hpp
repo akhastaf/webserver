@@ -11,6 +11,7 @@
 #include "utils.hpp"
 #include <errno.h>
 #include <algorithm>
+#include <set>
 
 # define BUFFER 1000
 # define MAX_REQ 1024
@@ -27,7 +28,8 @@ namespace webserve
             std::map<int, webserve::Socket*> _sockets;
             std::vector<webserve::Request> _requests;
             std::map<int, webserve::Response> _responses;
-            std::vector<int> _fdsize;
+            std::set<int> _fdsize;
+            std::set<int> _fdserver;
             fd_set _current_read_socket, _read_socket;
             fd_set _current_write_socket, _write_socket;
             int  _fd_max_size;
@@ -36,11 +38,13 @@ namespace webserve
             int accept_new_connection(int socket_index)
             {
                 int new_socket;
+                errno = 0;
                 if ((new_socket = accept(socket_index,
                                 (struct sockaddr *)_requests[socket_index].getAddress(),
                                 (socklen_t*)_requests[socket_index].getLengthAddress())) < 0)
                         std::cout << "accept error" << std::endl;
-                std::cout << "accepte is done" << std::endl;
+                std::cout << strerror(errno) << std::endl;
+                //std::cout << "accepte is done" << std::endl;
                 return new_socket;
             }
 
@@ -90,26 +94,6 @@ namespace webserve
                 return match[0];
             }
 
-            void    print_requests(std::string const& str)
-            {
-                for (int i = 0; i < str.length(); i++)
-                {
-                    switch (str[i])
-                    {
-                    case 10:
-                        std::cout << "\\n";
-                        break;
-                    case 13:
-                        std::cout << "\\r";
-                        break;
-                    default:
-                        std::cout << (char)str[i];
-                        break;
-                    }
-                }
-                std::cout << std::endl;
-            }
-
         public:
             VirtualServers(std::string const& filename)
             {
@@ -126,7 +110,6 @@ namespace webserve
                 Parser p(text);
                 _servers = p.parsing();
                 _fd_max_size = 0;
-                _fd_min_size = INT32_MAX;
                 _requests.insert(_requests.begin(), MAX_REQ, webserve::Request());
                 try
                 {
@@ -137,11 +120,9 @@ namespace webserve
                             continue;
                         tmp = new webserve::Socket(_servers[i]._port);
                         _sockets.insert(std::make_pair(tmp->getSocketFd(), tmp));
-                        fcntl(tmp->getSocketFd(), F_SETFL, O_NONBLOCK);
                         FD_SET(tmp->getSocketFd(), &_current_read_socket);
-                        _fd_max_size = std::max(tmp->getSocketFd(), _fd_max_size);
-                        _fd_min_size = std::min(tmp->getSocketFd(), _fd_min_size);
-                        _fdsize.push_back(tmp->getSocketFd());
+                        _fdsize.insert(tmp->getSocketFd());
+                        _fdserver.insert(tmp->getSocketFd());
                     }
                 }
                 catch(const std::string& e)
@@ -164,73 +145,69 @@ namespace webserve
                 std::map<int, long int> fd_with_time;
                 std::map<int, std::string>::iterator pos;
                 struct timeval select_time;
-                select_time.tv_sec = 1;
+                select_time.tv_sec = 2;
                 select_time.tv_usec = 0;
                 std::string s;
                 char buffer[BUFFER] = {0};
                 int valread;
-                int max_servers_fd = _fd_max_size;
                 while (true)
                 {
                     bzero(buffer, BUFFER);
                     _read_socket = _current_read_socket;
                     _write_socket = _current_write_socket;
-                    if (select(_fd_max_size + 1, &_read_socket, &_write_socket, NULL, &select_time) < 0)
+                    _fd_max_size = *_fdsize.rbegin();
+                    if (select(_fd_max_size + 1, &_read_socket, &_write_socket, NULL, NULL) < 0)
                         continue;
+                    std::cout << _fd_max_size << std::endl;
                     // check for Time out
                     // for (int i = 0; i < _fd_max_size + 1; i++)
                     // {
                     //     long int now = get_current_time();
                     // }
-
                     // check for ready socket
-                    for (int i = 0; i < _fd_max_size + 1; i++)
+                    for (std::set<int>::iterator it = _fdsize.begin(); it != _fdsize.end();)
                     {
-                        // check for reading sockets
+                        int i = *it;
+                        ++it;
                         if (FD_ISSET(i, &_read_socket))
                         {
-                            if (i <= max_servers_fd)
+                            if (_fdserver.count(i))
                             {
-                                if ((new_socket = accept_new_connection(i)) < 0)
-                                    continue;
-                                if (std::find(_fdsize.begin(), _fdsize.end(), new_socket) == _fdsize.end())
+                                if ((new_socket = accept_new_connection(i)) < 0 || new_socket > FD_SETSIZE)
                                 {
-                                    FD_SET(new_socket, &_current_read_socket);
-                                    _fdsize.push_back(new_socket);
-                                    _fd_max_size = new_socket;
-					            }
+                                    if (new_socket > FD_SETSIZE)
+                                        close(new_socket);
+                                    continue;
+                                }
+                                FD_SET(new_socket, &_current_read_socket);
+                                _fdsize.insert(new_socket);
+                                if (fcntl(new_socket, F_SETFL, O_NONBLOCK) == -1)
+                                    continue;
                             }
-                            else 
-                                new_socket = i;
-                            if (fcntl(new_socket, F_SETFL, O_NONBLOCK) == -1)
-                                continue;
-                            valread = read(new_socket, buffer, BUFFER);
-                            if (valread > 0){
-                                s = std::string(buffer, valread);
-                                fd_with_time[new_socket] = get_current_time();
-                            }
-                            else if (valread == 0)
-                                s = "";
-                            else 
-                            { 
-                                _requests[new_socket].clear();
-                                _responses[new_socket].getRequest().clear();
-                                if (FD_ISSET(new_socket, &_read_socket))
-                                    FD_CLR(new_socket, &_current_read_socket);
-                                else if (FD_ISSET(new_socket, &_write_socket))
-                                    FD_CLR(new_socket, &_current_write_socket);
-                                fd_with_time.erase(i);
-                                continue;
-                            }
-                            _requests[new_socket].append(s, valread);
-                            if (_requests[new_socket].isRequestComplete() && valread != -1)
+                            else
                             {
-                                _responses[new_socket] = Response(_requests[new_socket], _match_server(new_socket));
-                                _responses[new_socket].process();
-                                FD_CLR(new_socket, &_current_read_socket);
-                                FD_SET(new_socket, &_current_write_socket);
+                                new_socket = i;
+                                valread = read(new_socket, buffer, BUFFER);
+                                if (valread > 0){
+                                    s.assign(buffer, valread);
+                                    fd_with_time[new_socket] = get_current_time();
+                                    _requests[new_socket].append(s, valread);
+                                    if (_requests[new_socket].isRequestComplete())
+                                    {
+                                        _responses[new_socket] = Response(_requests[new_socket], _match_server(new_socket));
+                                        _responses[new_socket].process();
+                                        FD_CLR(new_socket, &_current_read_socket);
+                                        FD_SET(new_socket, &_current_write_socket);
+                                    }
+                                }
+                                else 
+                                { 
+                                    _requests[new_socket].clear();
+                                    _responses[new_socket].getRequest().clear();
+                                    FD_CLR(new_socket, &_current_read_socket);
+                                    continue;
+                                }
                             }
-                            
                         }
                         if (FD_ISSET(i, &_write_socket))
                         {
@@ -241,20 +218,17 @@ namespace webserve
                             int sended = 0;
                             if (valread != -1)
                                 sended = send(new_socket, buffer, valread, 0);
-                            if (sended > 0){
+                            if (sended >= 0){
                                 fd_with_time[new_socket] = get_current_time();
                                 _responses[new_socket].update_size_sended(sended);
                             }
                             if (sended  == -1 ){
                                 _requests[new_socket].clear();
                                 _responses[new_socket].getRequest().clear();
-                                if (FD_ISSET(new_socket, &_read_socket)){
-                                    FD_CLR(new_socket, &_current_read_socket);
-                                }
-                                else if (FD_ISSET(new_socket, &_write_socket)){
-                                    FD_CLR(new_socket, &_current_write_socket);
-                                }
+                                FD_CLR(new_socket, &_current_write_socket);
                                 fd_with_time.erase(i);
+                                _fdsize.erase(new_socket);
+                                close(new_socket);
                                 continue;
                             }
                             if (valread != sended && fd != -1 && valread > 0){
@@ -262,28 +236,15 @@ namespace webserve
                                 if (defferent > 0)
                                     lseek(fd, -defferent ,SEEK_CUR);
                             }
-
-
-
-                            if (valread <= 0 && sended == 0){
+                            if (!valread && !sended){
                                 close(_responses[new_socket].getFd());
                                 unlink(_responses[new_socket].getFilepath().c_str());
 
-                                // _responses[new_socket].reset();
-                                if (_requests[new_socket].isKeepAlive() == false){
+                                _responses[new_socket].reset();
+                                if (!_requests[new_socket].isKeepAlive()){
                                     FD_CLR(new_socket, &_current_write_socket);
                                     close(new_socket);
-                                    _fd_max_size = _fdsize[0];
-                                    int index = 0;
-                                    for (size_t i = 0; i < _fdsize.size(); i++){
-                                        if (_fdsize[i] == new_socket){
-                                            index = i;
-                                            continue;
-                                        }
-                                        _fd_max_size = std::max(_fdsize[i], _fd_max_size);
-                                    }
-                                    if (index != 0)
-                                        _fdsize.erase(_fdsize.begin() + index);
+                                    _fdsize.erase(new_socket);
                                 }
                                 else{
                                     FD_CLR(new_socket, &_current_write_socket);

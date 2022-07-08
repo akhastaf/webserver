@@ -41,7 +41,7 @@ namespace webserve
             {
                 time_t t;
                 time(&t);
-                std::string file_name = "response_" + std::to_string(t);
+                std::string file_name = "response_" + toString(t);
                 std::string filepath = "/tmp/" + file_name;
                 std::ofstream out(filepath);
                 _filepath = filepath;
@@ -54,8 +54,8 @@ namespace webserve
 
             std::string _constructUri(std::string path)
             {
-                std::cout << _request.getHost() + ":" + std::to_string(_request.getPort()) + path << std::endl;
-                return _request.getHost() + ":" + std::to_string(_request.getPort()) + path;
+                std::cout << _request.getHost() + ":" + toString(_request.getPort()) + path << std::endl;
+                return _request.getHost() + ":" + toString(_request.getPort()) + path;
             }
 
             Location _getLocation()
@@ -64,7 +64,6 @@ namespace webserve
                 std::string locationUri;
                 size_t pos;
                 bool notFound = true;
-                // std::vector<std::pair<std::string, webserve::Location> >::ite
                 do {
                     pos = uriCopy.find("/");
                     if (pos != std::string::npos)
@@ -168,7 +167,6 @@ namespace webserve
             }
             bool _checkBodySize()
             {
-                // check if location has max_client_body_size
                 if (_locationFound && _location._max_client_body_size != -1)
                 {
                     if (_request.getBodysize() > _location._max_client_body_size * 1e6)
@@ -210,13 +208,13 @@ namespace webserve
             {
                 int fd;
                 std::string body;
-                body = "<html>\n<head>\n<title>" + std::to_string(status) + " " + _getStatusdescription(status) + "</title>\n</head>\n<body>\n";
-                body += "<center>\n<h1>" + std::to_string(status) + " " + _getStatusdescription(status);
+                body = "<html>\n<head>\n<title>" + toString(status) + " " + _getStatusdescription(status) + "</title>\n</head>\n<body>\n";
+                body += "<center>\n<h1>" + toString(status) + " " + _getStatusdescription(status);
                 body += "</center>\n<hr>\n<center>webserver</center>\n</body>\n</html>";
-                _response = "HTTP/1.1 " + std::to_string(status) + " " + _getStatusdescription(status).c_str() + "\r\n";
+                _response = "HTTP/1.1 " + toString(status) + " " + _getStatusdescription(status).c_str() + "\r\n";
                 _response += "Server: webserver\r\n";
-                _response += "Content-Length: " + std::to_string(body.length()) + "\r\n";
-	            _response += "Connection: keep-alive\r\n\r\n";
+                _response += "Content-Length: " + toString(body.length()) + "\r\n";
+	            _response += "Connection: close\r\n\r\n";
                 _response += body;
                 _response += "\r\n\r\n";
             }
@@ -227,10 +225,10 @@ namespace webserve
                 struct stat s;
                 int fd;
 	            stat(path.c_str(), &s);
-                _response = "HTTP/1.1 " + std::to_string(status) + " " + _getStatusdescription(status).c_str() + "\r\n";
+                _response = "HTTP/1.1 " + toString(status) + " " + _getStatusdescription(status).c_str() + "\r\n";
                 _response += "Server: webserver\r\n";
-                _response += "Content-Length: " + std::to_string(s.st_size) + "\r\n";
-	            _response += "Connection: keep-alive\r\n\r\n";
+                _response += "Content-Length: " + toString(s.st_size) + "\r\n";
+	            _response += "Connection: close\r\n\r\n";
                 fd = open(path.c_str(), O_RDONLY);
                 fcntl(fd, F_SETFL, O_NONBLOCK);
                 char buffer[s.st_size];
@@ -243,7 +241,7 @@ namespace webserve
             void    _redirectTo(int status, std::string location)
             {
                 std::cout << status << " redirect to " << location << std::endl;
-                _response = "HTTP/1.1 " + std::to_string(status) + " " + _getStatusdescription(status).c_str() + "\r\n";
+                _response = "HTTP/1.1 " + toString(status) + " " + _getStatusdescription(status).c_str() + "\r\n";
                 _response += "Server: webserver\r\n";
                 _response += "Location: "+ location +"\r\n";
 	            _response += "Connection: close\r\n\r\n";
@@ -252,6 +250,23 @@ namespace webserve
             }
 
 
+            void    _conflict()
+            {
+                int fd;
+                std::string path;
+                if (_locationFound && _location._error_pages.count(409))
+                    path = _location._error_pages[409];
+                else if (_server._error_pages.count(409))
+                    path = _server._error_pages[409];
+                fd = open(path.c_str(), O_RDONLY);
+                fcntl(fd, F_SETFL, O_NONBLOCK);
+	            close(fd);
+                if (fd > 0)
+                    _loadError(409, path);
+                else
+                    _constructError(409);
+                _create_file();
+            }
             void    _badRequest()
             {
                 int fd;
@@ -443,7 +458,7 @@ namespace webserve
                 path += filename;
                 fileinfo += "                 " + _getTimeForAutoIndex(&s.st_mtimespec.tv_sec);
                 if (s.st_mode & S_IFREG)
-                    fileinfo += "                 " + std::to_string(s.st_size);
+                    fileinfo += "                 " + toString(s.st_size);
                 else
                     fileinfo += "                 --";
                 
@@ -467,11 +482,12 @@ namespace webserve
                     body = "<html>\n<head>\n<title>Index of " + _request.getUri() + "</title>\n</head>\n<body>";
                     body += "<h1>Index of " + _request.getUri() + "</h1><hr><pre>";
                     while ((dirIterator = readdir(dir)) != NULL)
+                        if (strcmp(dirIterator->d_name, "."))
                             body += _getfileInfoForAutoIndex(dirIterator->d_name, path);
                     body += "</pre><hr>\n</body>\n</html>";
                     _response = "HTTP/1.1 200 " + _getStatusdescription(200) + "\r\n";
                     _response += "Server: webserver\r\n";
-                    _response += "Content-Length: " + std::to_string(body.length()) + "\r\n";
+                    _response += "Content-Length: " + toString(body.length()) + "\r\n";
                     _response += "Connection: " + _request.get("Connection").front() + "\r\n\r\n";
                     _response += body;
                     _response += "\r\n\r\n";
@@ -549,7 +565,7 @@ namespace webserve
 			        _response += "Content-Type: " + type + "\r\n";
                 _response += "Connection: close\r\n";	
                 if (type !="CGI/Content")
-                    _response += "Content-Length: " + std::to_string(s.st_size) + "\r\n\r\n";
+                    _response += "Content-Length: " + toString(s.st_size) + "\r\n\r\n";
                 char buffer[1000];
                 int reading = 0;
                 while((reading = read(fd, buffer, 1000)) > 0){
@@ -677,24 +693,29 @@ namespace webserve
                 variables.push_back("SCRIPT_NAME=");
                 variables.push_back("SCRIPT_FILENAME=" + path);
                 variables.push_back("SERVER_NAME=Webserver");
-                variables.push_back("SERVER_PORT=" + std::to_string(_request.getPort()));
+                variables.push_back("SERVER_PORT=" + toString(_request.getPort()));
                 variables.push_back("SERVER_PROTOCOL=HTTP/1.1");
                 variables.push_back("SERVER_SOFTWARE=" + _cgi_path);
                 variables.push_back("REDIRECT_STATUS=200");
                 variables.push_back("DOCUMENT_URI=" + _request.getUri());
                 std::map<std::string, std::vector<std::string> >::iterator it = _request.getRequest().begin();
                 std::string str;
+                int pos;
                 for (; it != _request.getRequest().end(); it++)
                 {
                     str = "HTTP_" + _convertHTTPFiled(it->first) + "= ";
                     for (int i = 0; i < it->second.size(); i++)
                     {
                         str += it->second[i];
-                        if (i + 1 < it->second.size())
+                        if (i + 1 < it->second.size() && it->second[i].back() != ';')
                             str += ", ";
+                        else if (i + 1 < it->second.size())
+                            str += " ";
                     }
                     variables.push_back(str);
                 }
+                for (int i = 0; i < variables.size(); i++)
+                    std::cout << variables[i] << std::endl;
                 char ** vars = new char*[variables.size() + 1];
                 int i;
                 for (i = 0; i < variables.size(); i++)
@@ -709,14 +730,13 @@ namespace webserve
                 char **meta_variables = _setCGIMetaVariables(path);
                 time_t t;
                 time(&t);
-                std::string filename = "/tmp/cgi_" + std::to_string(t) + ".cgi";
+                std::string filename = "/tmp/cgi_" + toString(t) + ".cgi";
                 std::cout << filename << std::endl;
                 char *args[3];
                 args[0] = (char *)_cgi_path.c_str();
                 args[1] = (char *)_request.getUri().c_str();
                 args[2] = NULL;
                 int fdout = open(filename.c_str(), O_RDWR | O_CREAT , S_IRWXU | S_IRWXG);
-                //fcntl(fdout, F_SETFL, O_NONBLOCK);
                 pid_t pid = fork();
                 std::string path_c = _request.getPath();
                 if (pid == 0)
@@ -772,7 +792,7 @@ namespace webserve
                     std::string status_code = out.substr(pos + 7, end);
                     _response = "HTTP/1.1 " + status_code + " " + _getStatusdescription(std::stoi(status_code)) + "\r\n";
                 }
-                _response += "Content-Length: " + std::to_string(size) + "\r\n";
+                _response += "Content-Length: " + toString(size) + "\r\n";
                 close(fdout);
                 _loadResource(filename);
             }
@@ -842,11 +862,9 @@ namespace webserve
                         return _redirectTo(301, _constructUri(_request.getUri() + "/"));
                     else if (_hasIndexFiles(path))
                     {
-                        // return _loadResource(_getIndexFiles(path));
-                        return _forbidden();
+                        if (_locationHasCGI())
+                            return _cgi(path);
                     }
-                    // else if (_hasAutoIndex())
-                    //     return _autoInedxCreate();
                     else
                         return _forbidden();
                 }
@@ -883,8 +901,13 @@ namespace webserve
                 {
                     std::cout << "is a dir" << std::endl;
                     if (path.back() != '/')
-                        return _redirectTo(301, _constructUri(_request.getUri() + "/"));
-                    // if Location has CGI
+                        return _conflict();
+                    if (_locationHasCGI())
+                    {
+                        if (_hasIndexFiles(path))
+                            return _forbidden();
+                        return _cgi(path);
+                    }
                     return _deleteDirectoryContent(path);
                 }
             }
@@ -923,7 +946,7 @@ namespace webserve
                     return _payloadTooLarge();
                 if ((!_checkUri() || (_request.getMethod() == "POST" && !_request.has("Transfer-Encoding") && !_request.has("Content-Length"))))
                     return _badRequest();
-                if (_request.get("Uri")[0].length() > 2048)
+                if (_request.getUri().length() > 2048)
                     return _requestUriTooLong();
                 // if (_request.getMethod() != "GET" && _request.getMethod() != "POST" && _request.getMethod() != "DELETE")
                 //     return _notImplemented();

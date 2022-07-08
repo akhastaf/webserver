@@ -5,9 +5,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     // save $_FILES['avatar'] to a inside a folder
     $avatar = $_FILES['avatar'];
-    echo '<pre>';
-    print_r($_SERVER);
-    echo '</pre>';
     $avatar_name = $avatar['name'];
     $avatar_tmp_name = $avatar['tmp_name'];
     $avatar_size = $avatar['size'];

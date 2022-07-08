@@ -17,10 +17,10 @@ namespace webserve
                 _address.sin_port = htons(port);
                 _address.sin_addr.s_addr = htonl(interface);
                 _len_address = sizeof(_address);
-                //memset(_address.sin_zero, '\0', sizeof _address.sin_zero);
                 if ((_socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
                     throw ("socket  error");
                 const int enable = 1;
+                fcntl(_socket_fd, F_SETFL, O_NONBLOCK);
                 setsockopt(_socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
                 if (bind(_socket_fd, (struct sockaddr *)&_address, sizeof(_address)) < 0)
                 {
@@ -31,7 +31,7 @@ namespace webserve
                     exit(EXIT_FAILURE);
                     //throw ("bind  error");
                 }
-                if (listen(_socket_fd, 10) < 0)
+                if (listen(_socket_fd, 1024) < 0)
                 {
                     perror("in listen");
                     throw ("listen  error");
