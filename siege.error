@@ -1,0 +1,143 @@
+** SIEGE 4.1.3
+** Preparing 25 concurrent users for battle.
+The server is now under siege...
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+[[1;33merror[0m] socket: unable to connect sock.c:282: Operation timed out
+
+Lifting the server siege...
+Transactions:		       98347 hits
+Availability:		       99.87 %
+Elapsed time:		      221.56 secs
+Data transferred:	        0.00 MB
+Response time:		        0.02 secs
+Transaction rate:	      443.88 trans/sec
+Throughput:		        0.00 MB/sec
+Concurrency:		        8.57
+Successful transactions:       98347
+Failed transactions:	         125
+Longest transaction:	       13.60
+Shortest transaction:	        0.00
+ 

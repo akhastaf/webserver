@@ -1,4 +1,6 @@
-SRCS		=   main.cpp Config.cpp
+SRCS		=  	main.cpp srcs/Parser.cpp srcs/Tokenizer.cpp srcs/RequestTokenizer.cpp srcs/RequestParser.cpp \
+				srcs/Request.cpp srcs/Response.cpp srcs/VirtualServers.cpp srcs/Socket.cpp srcs/Server.cpp \
+				srcs/utils.cpp srcs/MimeTypes.cpp
 
 CPP_VERSION	=	-std=c++98
 
