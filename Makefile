@@ -14,6 +14,8 @@ all : $(NAME)
 
 $(NAME) : $(SRC) 
 	@$(COMPILER) $(CPP_VERSION) $(FLAGS) $(SRCS) -o $(NAME)
+debug:
+	@$(COMPILER) $(CPP_VERSION) $(FLAGS) -g -fsanitize=address $(SRCS) -o $(NAME)
 
 clean :
 	@rm -rf *.dSYM .vscode a.out

@@ -2,6 +2,7 @@
 # define REQUEST_HPP
 # include <string.h>
 # include <iostream>
+#include <string>
 # include <sys/_types/_size_t.h>
 # include <vector>
 # include <map>
@@ -71,6 +72,7 @@ namespace webserve
             int* getLengthAddress();
             void    setTimeOUT(bool state);
             bool    getTimeOUT() const;
+            std::string getConnection();
             
     };
 }

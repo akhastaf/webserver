@@ -244,6 +244,12 @@ std::string webserve::Request::getContentLength()
         return get("Content-Length").front();
     return std::string();
 }
+std::string webserve::Request::getConnection()
+{
+    if (has("Connection"))
+        return get("Connection").front();
+    return std::string();
+}
 std::string webserve::Request::getQuery()
 {
     if (has("Query"))

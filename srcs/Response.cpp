@@ -1,4 +1,5 @@
 #include "../includes/Response.hpp"
+#include <sys/_types/_s_ifmt.h>
 
 void webserve::Response::_create_file()
 {
@@ -540,7 +541,7 @@ void    webserve::Response::_loadResource(std::string path)
     }
     if (type.length() && type !="CGI/Content")
         _response += "Content-Type: " + type + "\r\n";
-    _response += "Connection: " + _request.get("Connection").front() + "\r\n";	
+    _response += "Connection: " + _request.getConnection() + "\r\n";	
     if (type !="CGI/Content")
         _response += "Content-Length: " + toString(s.st_size) + "\r\n\r\n";
     char buffer[1000];
@@ -810,7 +811,7 @@ void    webserve::Response::_proccessPOST(std::string uri)
         else if (_hasIndexFiles(path))
         {
             if (_locationHasCGI())
-                return _cgi(path);
+                return _cgi(_getIndexFiles(path));
         }
         else
             return _forbidden();
