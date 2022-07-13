@@ -1,5 +1,6 @@
 #include "../includes/Response.hpp"
 #include <sys/_types/_s_ifmt.h>
+#include <sys/_types/_size_t.h>
 
 void webserve::Response::_create_file()
 {
@@ -14,6 +15,22 @@ void webserve::Response::_create_file()
     _fd = open(filepath.c_str(), O_RDONLY);
     fcntl(_fd, F_SETFL, O_NONBLOCK);
     _size_sended = 0;
+}
+
+std::string webserve::Response::_getPath(std::string uri)
+{
+    std::string path;
+    size_t pos;
+    if (_locationFound && _location._root.length())
+    {
+        path = _location._root;
+        pos = uri.find(_locationPath);
+        uri.erase(pos, _locationPath.length());    
+    }
+    else
+        path = _server._root;
+    path += uri;
+    return path;
 }
 
 std::string webserve::Response::_constructUri(std::string path)
@@ -44,6 +61,7 @@ webserve::Location webserve::Response::_getLocation()
             if (_server._locations[i].first == locationUri)
             {
                 _locationFound = true;
+                _locationPath = _server._locations[i].first;
                 return _server._locations[i].second;
             }
         }
@@ -54,10 +72,12 @@ webserve::Location webserve::Response::_getLocation()
         if (_server._locations[i].first == locationUri)
         {
             _locationFound = true;
+            _locationPath = _server._locations[i].first;
             return _server._locations[i].second;
         }
     }
     _locationFound = false;
+    _locationPath.clear();
     return Location();
 }
 std::string   webserve::Response::_getStatusdescription(int statusCode)
@@ -410,6 +430,7 @@ void    webserve::Response::_requestUriTooLong()
 
 bool webserve::Response::_hasAutoIndex()
 {
+    std::cout << "auto index" << std::endl;
     if (_locationFound)
         return _location._autoindex;
     return _server._autoindex;
@@ -444,17 +465,16 @@ std::string webserve::Response::_getfileInfoForAutoIndex(std::string filename, s
     return fileinfo;
 }
 
-void    webserve::Response::_autoInedxCreate()
+void    webserve::Response::_autoInedxCreate(std::string path)
 {
     std::string body;
-    std::string path;
     DIR *dir;
     struct dirent *dirIterator;
-    if (_locationFound && _location._root.length())
-        path = _location._root;
-    else
-        path = _server._root;
-    path += _request.getUri();
+    // if (_locationFound && _location._root.length())
+    //     path = _location._root;
+    // else
+    //     path = _server._root;
+    // path += _request.getUri();
     if ((dir = opendir(path.c_str())) != NULL)
     {
         body = "<html>\n<head>\n<title>Index of " + _request.getUri() + "</title>\n</head>\n<body>";
@@ -752,15 +772,9 @@ void    webserve::Response::_cgi(std::string path)
 }
 
 
-void    webserve::Response::_proccessGET(std::string uri)
+void    webserve::Response::_proccessGET(std::string path)
 {
     struct stat s;
-    std::string path;
-    if (_locationFound && _location._root.length())
-        path = _location._root;
-    else
-        path = _server._root;
-    path += uri;
     if (stat(path.c_str(), &s) < 0)
         return _notFound();
     if (S_ISREG(s.st_mode))
@@ -776,24 +790,17 @@ void    webserve::Response::_proccessGET(std::string uri)
         else if (_hasIndexFiles(path))
             return _loadResource(_getIndexFiles(path));
         else if (_hasAutoIndex())
-            return _autoInedxCreate();
+            return _autoInedxCreate(path);
         else
             return _forbidden();
-        
     }
     return _notFound();
 }
 
 
-void    webserve::Response::_proccessPOST(std::string uri)
+void    webserve::Response::_proccessPOST(std::string path)
 {
     struct  stat s;
-    std::string path;
-    if (_locationFound && _location._root.length())
-        path = _location._root;
-    else
-        path = _server._root;
-    path += uri;
     if (_hasUpload() && !_locationHasCGI())
         return _upload();
     if (stat(path.c_str(), &s) < 0)
@@ -818,15 +825,9 @@ void    webserve::Response::_proccessPOST(std::string uri)
     }
 }
 
-void    webserve::Response::_proccessDELETE(std::string uri)
+void    webserve::Response::_proccessDELETE(std::string path)
 {
     struct  stat s;
-    std::string path;
-    if (_locationFound && _location._root.length())
-        path = _location._root;
-    else
-        path = _server._root;
-    path += uri;
     errno = 0;
     if (lstat(path.c_str(), &s) < 0)
     {
@@ -864,7 +865,7 @@ webserve::Response::Response(Request const& req,  Server server) :  _request(req
     // if (_locationFound)
     // {
     //     std::cout << "##############################################" << std::endl;   
-    //     std::cout << "locatio found " << std::endl;
+    //     std::cout << "location found " << _locationPath << std::endl;
     //     std::cout << _location << std::endl;
     //     std::cout << "##############################################" << std::endl;   
     // }
@@ -898,11 +899,11 @@ void    webserve::Response::process()
     if (!_checkAllowedMethod())
         _unallowedMethod();
     if (_request.getMethod() == "GET")
-        return _proccessGET(_request.getUri());
+        return _proccessGET(_getPath(_request.getUri()));
     else if (_request.getMethod() == "POST")
-        _proccessPOST(_request.getUri());
+        _proccessPOST(_getPath(_request.getUri()));
     else if (_request.getMethod() == "DELETE")
-        _proccessDELETE(_request.getUri());
+        _proccessDELETE(_getPath(_request.getUri()));
     else
         return _notImplemented();
 }
