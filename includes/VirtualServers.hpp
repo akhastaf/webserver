@@ -16,9 +16,6 @@
 #include <sys/stat.h>
 
 # define BUFFER 1000
-# define MAX_REQ 1024
-
-#define CGI_TIME_OUT 2000000
 #define REQUEST_TIME_OUT 1000000
 namespace webserve
 {

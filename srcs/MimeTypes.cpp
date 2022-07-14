@@ -39,7 +39,7 @@ std::string webserve::MimeTypes::getExtention(std::string type)
 
 void webserve::MimeTypes::set()
 {
-    std::ifstream input("./mime.csv");
+    std::ifstream input("./mime.type");
     std::string     line;
     std::string buffer, key, value;
     while (std::getline(input, line))
@@ -48,7 +48,7 @@ void webserve::MimeTypes::set()
         int i = 0;
         while(std::getline(line_strem, buffer, ',' ) && i < 2){
             if (i == 0)
-                key = buffer;//_Tolower(buffer);
+                key = buffer;
             else if (i == 1)
                 value = buffer;
             i++;

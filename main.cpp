@@ -5,7 +5,7 @@
 
 int main(int ac, char **av)
 {
-    std::string filename = "test.conf";
+    std::string filename = "default.conf";
     if (ac == 2)
         filename = av[1];
         

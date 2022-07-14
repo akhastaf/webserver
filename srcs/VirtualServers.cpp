@@ -70,7 +70,7 @@ webserve::VirtualServers::VirtualServers(std::string const& filename)
     Parser p(text);
     _servers = p.parsing();
     _fd_max_size = 0;
-    _requests.insert(_requests.begin(), MAX_REQ, webserve::Request());
+    _requests.insert(_requests.begin(), FD_SETSIZE, webserve::Request());
     try
     {
         _init_fd_set();
@@ -141,41 +141,34 @@ void    webserve::VirtualServers::connect()
                 else
                 {
                     new_socket = i;
-                    long int now = get_current_time();
-                    
-                    if (fd_with_time[new_socket] && now - fd_with_time[new_socket] >= REQUEST_TIME_OUT)
-                    {
-                        _requests[new_socket].setTimeOUT(true);
-                        _requests[new_socket].setRequestComplete(true);
-                        _responses[new_socket] = Response(_requests[new_socket], _match_server(new_socket));
-                        _responses[new_socket].process();
-                        FD_CLR(new_socket, &_current_read_socket);
-                        FD_SET(new_socket, &_current_write_socket);
-                    }
-                    else {
-                        valread = read(new_socket, buffer, BUFFER);
-                        if (valread > 0){
-                            s.assign(buffer, valread);
-                            fd_with_time[new_socket] = get_current_time();
-                            _requests[new_socket].append(s, valread);
-                            if (_requests[new_socket].isRequestComplete())
-                            {
-                                _responses[new_socket] = Response(_requests[new_socket], _match_server(new_socket));
-                                _responses[new_socket].process();
-                                FD_CLR(new_socket, &_current_read_socket);
-                                FD_SET(new_socket, &_current_write_socket);
-                            }
+                    valread = read(new_socket, buffer, BUFFER);
+                    if (valread > 0){
+                        s.assign(buffer, valread);
+                        fd_with_time[new_socket] = get_current_time();
+                        _requests[new_socket].append(s, valread);
+                        long int now = get_current_time();
+                        if (fd_with_time[new_socket] && now - fd_with_time[new_socket] >= REQUEST_TIME_OUT)
+                        {
+                            _requests[new_socket].setTimeOUT(true);
+                            _requests[new_socket].setRequestComplete(true);
                         }
-                        else if (valread == -1)
-                        { 
-                            _requests[new_socket].clear();
-                            _responses[new_socket].getRequest().clear();
+                        if (_requests[new_socket].isRequestComplete())
+                        {
+                            _responses[new_socket] = Response(_requests[new_socket], _match_server(new_socket));
+                            _responses[new_socket].process();
                             FD_CLR(new_socket, &_current_read_socket);
-                            close(new_socket);
-                            fd_with_time.erase(i);
-                            _fdsize.erase(new_socket);
-                            continue;
+                            FD_SET(new_socket, &_current_write_socket);
                         }
+                    }
+                    else if (valread == -1)
+                    { 
+                        _requests[new_socket].clear();
+                        _responses[new_socket].getRequest().clear();
+                        FD_CLR(new_socket, &_current_read_socket);
+                        close(new_socket);
+                        fd_with_time.erase(i);
+                        _fdsize.erase(new_socket);
+                        continue;
                     }
                 }
             }

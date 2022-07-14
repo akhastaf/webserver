@@ -18,7 +18,7 @@ webserve::Socket::Socket(int port, u_long interface) // = INADDR_ANY
     }
     if (listen(_socket_fd, 128) < 0)
     {
-        perror("in listen");
+        close(_socket_fd); 
         throw ("listen  error");
     }
 }

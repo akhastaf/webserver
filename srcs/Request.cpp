@@ -68,7 +68,6 @@ void webserve::Request::append(std::string str, size_t len)
         _isHeaderComplete = true;
         _rawRequest.erase(r);
         parse();
-        print();
         if (!_request.count("Content-Length") || (has("Content-Length") && !std::stol(_request["Content-Length"][0])))
         {
             _isComplete = true;

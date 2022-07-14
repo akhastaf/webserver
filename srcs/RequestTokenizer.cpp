@@ -91,6 +91,6 @@ webserve::RequestTokenizer::Token webserve::RequestTokenizer::get_next_token()
         _cursor = match;
         return t;
     }
-        throw ("undefinde token " + std::string(_cursor, _cursor + 1));
+    throw ("undefinde token " + std::string(_cursor, _cursor + 1));
     return t;
 }

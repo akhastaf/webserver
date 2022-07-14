@@ -24,7 +24,6 @@ namespace webserve
         std::vector<std::string> _allowed_methods;
         std::pair<int, std::string> _redirection;
         std::string _upload;
-        // friend std::ostream& operator<< (std::ostream& o, webserve::Location const& location);
     };
     struct Server
     {

@@ -430,7 +430,6 @@ void    webserve::Response::_requestUriTooLong()
 
 bool webserve::Response::_hasAutoIndex()
 {
-    std::cout << "auto index" << std::endl;
     if (_locationFound)
         return _location._autoindex;
     return _server._autoindex;
@@ -457,7 +456,7 @@ std::string webserve::Response::_getfileInfoForAutoIndex(std::string filename, s
     std::string fileinfo = "<div><a href=\"" + filepath + "\">" + filename + "</a></div>";
     path += filename;
     fileinfo += "                 " + _getTimeForAutoIndex(&s.st_mtimespec.tv_sec);
-    if (s.st_mode & S_IFREG)
+    if (S_ISREG(s.st_mode))
         fileinfo += "                 " + toString(s.st_size);
     else
         fileinfo += "                 --";
@@ -470,11 +469,6 @@ void    webserve::Response::_autoInedxCreate(std::string path)
     std::string body;
     DIR *dir;
     struct dirent *dirIterator;
-    // if (_locationFound && _location._root.length())
-    //     path = _location._root;
-    // else
-    //     path = _server._root;
-    // path += _request.getUri();
     if ((dir = opendir(path.c_str())) != NULL)
     {
         body = "<html>\n<head>\n<title>Index of " + _request.getUri() + "</title>\n</head>\n<body>";
@@ -485,6 +479,7 @@ void    webserve::Response::_autoInedxCreate(std::string path)
         body += "</pre><hr>\n</body>\n</html>";
         _response = "HTTP/1.1 200 " + _getStatusdescription(200) + "\r\n";
         _response += "Server: webserver\r\n";
+        _response += "Content-Type: " + MimeTypes::getType("test.html") +  "\r\n";
         _response += "Content-Length: " + toString(body.length()) + "\r\n";
         _response += "Connection: " + _request.get("Connection").front() + "\r\n\r\n";
         _response += body;
@@ -548,7 +543,6 @@ void    webserve::Response::_loadResource(std::string path)
     struct stat s;
     stat(path.c_str(), &s);
     int fd  = open(path.c_str(), O_RDONLY);
-    fcntl(fd, F_SETFL, O_NONBLOCK);
     if (fd == -1)
         return _notFound();
     if (type !="CGI/Content")
@@ -730,8 +724,6 @@ void    webserve::Response::_cgi(std::string path)
     if (pid == 0)
     {
         int fdin = open(path_c.c_str(), O_RDONLY);
-        if (fdin == -1)
-            perror("error");
         dup2(fdout, STDOUT_FILENO);
         dup2(fdin, STDIN_FILENO);
         execve(args[0], args, meta_variables);
@@ -741,6 +733,10 @@ void    webserve::Response::_cgi(std::string path)
     {
         while (waitpid(pid, NULL, WNOHANG) == 0)
             ;
+        int i = -1;
+        while (meta_variables[++i])
+            delete meta_variables[i];
+        delete meta_variables;
         close(fdout);
     }
     char buffer[1000];
