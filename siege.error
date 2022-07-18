@@ -3,16 +3,16 @@
 The server is now under siege...
 
 Lifting the server siege...
-Transactions:		       20858 hits
+Transactions:		      352961 hits
 Availability:		      100.00 %
-Elapsed time:		        9.65 secs
+Elapsed time:		      177.50 secs
 Data transferred:	        0.00 MB
 Response time:		        0.01 secs
-Transaction rate:	     2161.45 trans/sec
+Transaction rate:	     1988.51 trans/sec
 Throughput:		        0.00 MB/sec
-Concurrency:		       24.91
-Successful transactions:       20858
+Concurrency:		       24.86
+Successful transactions:      352960
 Failed transactions:	           0
-Longest transaction:	        0.06
+Longest transaction:	        0.11
 Shortest transaction:	        0.00
  
