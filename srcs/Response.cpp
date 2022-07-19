@@ -225,7 +225,6 @@ void    webserve::Response::_redirectTo(int status, std::string location)
     _response += "Server: webserver\r\n";
     _response += "Location: "+ location +"\r\n";
     _response += "Connection: close\r\n\r\n";
-    _response += "\r\n\r\n";
     _create_file();
 }
 
@@ -847,8 +846,8 @@ void    webserve::Response::_proccessDELETE(std::string path)
         if (_locationHasCGI())
         {
             if (_hasIndexFiles(path))
-                return _forbidden();
-            return _cgi(path);
+                return _cgi(_getIndexFiles(path));
+            return _forbidden();
         }
         return _deleteDirectoryContent(path);
     }
@@ -858,13 +857,6 @@ webserve::Response::Response() {}
 webserve::Response::Response(Request const& req,  Server server) :  _request(req), _server(server), _locationFound(false)
 {
     _location = _getLocation();
-    // if (_locationFound)
-    // {
-    //     std::cout << "##############################################" << std::endl;   
-    //     std::cout << "location found " << _locationPath << std::endl;
-    //     std::cout << _location << std::endl;
-    //     std::cout << "##############################################" << std::endl;   
-    // }
 }
 webserve::Response::Response(Response const& res)
 {

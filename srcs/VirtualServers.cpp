@@ -78,7 +78,7 @@ webserve::VirtualServers::VirtualServers(std::string const& filename)
         {
             if (_alredy_binded(i, _servers[i]._port))
                 continue;
-            tmp = new Socket(_servers[i]._port);
+            tmp = new Socket(_servers[i]._port, );
             _sockets.insert(std::make_pair(tmp->getSocketFd(), tmp));
             FD_SET(tmp->getSocketFd(), &_current_read_socket);
             _fdsize.insert(tmp->getSocketFd());
@@ -142,7 +142,7 @@ void    webserve::VirtualServers::connect()
                 {
                     new_socket = i;
                     valread = read(new_socket, buffer, BUFFER);
-                    if (valread > 0){
+                    if (valread >= 0){
                         s.assign(buffer, valread);
                         fd_with_time[new_socket] = get_current_time();
                         _requests[new_socket].append(s, valread);

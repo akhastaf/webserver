@@ -6,7 +6,7 @@ webserve::Socket::Socket(int port, u_long interface) // = INADDR_ANY
     _address.sin_port = htons(port);
     _address.sin_addr.s_addr = htonl(interface);
     _len_address = sizeof(_address);
-    if ((_socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+    if ((_socket_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         throw ("socket  error");
     const int enable = 1;
     fcntl(_socket_fd, F_SETFL, O_NONBLOCK);
