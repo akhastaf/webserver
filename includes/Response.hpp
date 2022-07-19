@@ -70,6 +70,7 @@ namespace webserve
             void    _loadResource(std::string path);
             void    _upload();
             void    _deleteFile(std::string path);
+            void    _deleteDirectory(std::string path);
             void    _deleteDirectoryContent(std::string path);
             bool _locationHasCGI();
             std::string _convertHTTPFiled(std::string filed);

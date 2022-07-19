@@ -275,7 +275,7 @@ void    webserve::Parser::Autoindex_statment(bool& autoindex)
         else if (_lookahead.type == "STRING" && _lookahead.value == "off")
             autoindex = false;
         else
-            throw ("unexpected : on | off");
+            throw (std::string("unexpected : on | off"));
         _eat("STRING");
         _eat(";");
     }

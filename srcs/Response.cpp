@@ -1,6 +1,14 @@
 #include "../includes/Response.hpp"
+#include <cstdio>
+#include <dirent.h>
+#include <ostream>
+#include <strings.h>
 #include <sys/_types/_s_ifmt.h>
 #include <sys/_types/_size_t.h>
+#include <sys/errno.h>
+#include <sys/fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 void webserve::Response::_create_file()
 {
@@ -12,7 +20,10 @@ void webserve::Response::_create_file()
     _filepath = filepath;
     out << _response;
     out.close();
+    errno = 0;
     _fd = open(filepath.c_str(), O_RDONLY);
+    if (_fd == -1)
+        perror("error");
     fcntl(_fd, F_SETFL, O_NONBLOCK);
     _size_sended = 0;
 }
@@ -569,6 +580,26 @@ void    webserve::Response::_loadResource(std::string path)
     _create_file();
 }
 
+int _moveFile(std::string oldpath, std::string newpath)
+{
+    std::ofstream out;
+    struct stat s;
+    int r;
+    int fd = open(oldpath.c_str(), O_RDONLY);
+    if (stat(oldpath.c_str(), &s) < 0 || fd < 0)
+        return -1;
+    char buff[1000];
+    bzero(buff, 1000);
+    out.open(newpath);
+    while ((r = read(fd, buff, 1000)) > 0)
+        out << std::string(buff, r);
+    if (r < 0 || !out.is_open())
+        r = -1;
+    close(fd);
+    out.close();
+    return r;
+}
+
 void    webserve::Response::_upload()
 {
     std::string path;
@@ -582,11 +613,10 @@ void    webserve::Response::_upload()
     if (path.back() != '/')
         path.push_back('/');
     extention = MimeTypes::getExtention(_request.getContentType());
-    std::string mv = "mv " + realPath + " " + (path + filename);
+    path += filename;
     if (extention.size())
-        mv += "." + extention;
-
-    int r = system(mv.c_str());
+        path += "." + extention;
+    int r = _moveFile(realPath, path);
     if (r != -1)
         _response += "HTTP/1.1 201 " + _getStatusdescription(201) + "\r\n";
     else
@@ -601,20 +631,36 @@ void    webserve::Response::_upload()
 void    webserve::Response::_deleteFile(std::string path)
 {
     unlink(path.c_str());
-    _response += "HTTP/1.1 204 " + _getStatusdescription(204) + "\r\n";
+    _response = "HTTP/1.1 204 " + _getStatusdescription(204) + "\r\n";
     _response += "Server: webserver\r\n";
     _response += "Content-Length: 0\r\n";
-    _response +=  "Connection: close\r\n";
+    _response +=  "Connection: close\r\n\r\n";
     _create_file();
 }
-void    webserve::Response::_deleteDirectoryContent(std::string path)
+
+void    webserve::Response::_deleteDirectory(std::string path)
 {
     DIR *dir = NULL;
+    struct stat s;
     struct dirent *dirIterator;
     std::string filePath;
+    dir = opendir(path.c_str());
+    if (!dir)
+        return _internalError();
+    std::cout << path << std::endl;
     while ((dirIterator = readdir(dir)) != NULL)
     {
+        if (!strcmp(dirIterator->d_name, ".") || !strcmp(dirIterator->d_name, ".."))
+            continue;
         filePath = path + dirIterator->d_name;
+        if (stat(filePath.c_str(), &s) < 0)
+            return _internalError(); 
+        if (S_ISDIR(s.st_mode))
+        {
+            _deleteDirectory(filePath + "/");
+            continue;
+                
+        }
         if (unlink(filePath.c_str()) < 0)
         {
             if (errno == EACCES)
@@ -623,11 +669,21 @@ void    webserve::Response::_deleteDirectoryContent(std::string path)
                 return _internalError();
         }
     }
-    _response += "HTTP/1.1 204 " + _getStatusdescription(204) + "\r\n";
-    _response += "Server: webserver\r\n";
-    _response += "Content-Length: 0\r\n";
-    _response +=  "Connection: close\r\n";
-    _create_file();
+    if (rmdir(path.c_str()) < 0)
+        return _internalError();
+    closedir(dir);
+}
+void    webserve::Response::_deleteDirectoryContent(std::string path)
+{
+    _deleteDirectory(path);
+    if (_response.empty())
+    {
+        _response = "HTTP/1.1 204 " + _getStatusdescription(204) + "\r\n";
+        _response += "Server: webserver\r\n";
+        _response += "Content-Length: 0\r\n";
+        _response +=  "Connection: close\r\n\r\n";
+        _create_file();
+    }
 }
 
 bool webserve::Response::_locationHasCGI()

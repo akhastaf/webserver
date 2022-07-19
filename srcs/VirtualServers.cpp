@@ -1,4 +1,9 @@
 #include "../includes/VirtualServers.hpp"
+#include <cstdio>
+#include <sys/_types/_in_addr_t.h>
+#include <sys/errno.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 int webserve::VirtualServers::accept_new_connection(int socket_index)
 {
@@ -8,6 +13,16 @@ int webserve::VirtualServers::accept_new_connection(int socket_index)
                     (socklen_t*)_requests[socket_index].getLengthAddress());
     return new_socket;
 }
+
+u_long  _getAddress(std::string ip)
+{
+    in_addr_t add;
+    if (ip == "localhost")
+        ip = "127.0.0.1";
+    add = inet_addr(ip.c_str());
+    return add;
+}
+
 
 bool webserve::VirtualServers::_alredy_binded(int index, int port)
 {
@@ -63,7 +78,7 @@ webserve::VirtualServers::VirtualServers(std::string const& filename)
     std::ifstream file;
     file.open(filename);
     if (!file.is_open())
-        throw "file can't be open";
+        throw (std::string("file can't be open"));
     while (getline(file, buffer))
         text += buffer + "\n";
     file.close();
@@ -78,7 +93,7 @@ webserve::VirtualServers::VirtualServers(std::string const& filename)
         {
             if (_alredy_binded(i, _servers[i]._port))
                 continue;
-            tmp = new Socket(_servers[i]._port, );
+            tmp = new Socket(_servers[i]._port, _getAddress(_servers[i]._ip)); //, inet_ntop()
             _sockets.insert(std::make_pair(tmp->getSocketFd(), tmp));
             FD_SET(tmp->getSocketFd(), &_current_read_socket);
             _fdsize.insert(tmp->getSocketFd());
@@ -88,6 +103,7 @@ webserve::VirtualServers::VirtualServers(std::string const& filename)
     catch(const std::string& e)
     {
         std::cerr << e << std::endl;
+        exit(1);
     }
 }
 
