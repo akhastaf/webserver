@@ -187,13 +187,14 @@ bool webserve::Response::_checkUri()
 bool webserve::Response::_checkAllowedMethod()
 {
     std::string method = _request.getMethod();
+   
     if (_locationFound)
     {
-        if (std::find(_location._allowed_methods.begin(), _location._allowed_methods.end(), method) != _location._allowed_methods.end())
+        if (std::find(_location._allowed_methods.begin(), _location._allowed_methods.end(), method) == _location._allowed_methods.end())
             return true;
         return false;
     }
-    else if (std::find(_server._allowed_methods.begin(), _server._allowed_methods.end(), method) != _server._allowed_methods.end())
+    if (std::find(_server._allowed_methods.begin(), _server._allowed_methods.end(), method) == _server._allowed_methods.end())
         return true;
     return false;
 }
@@ -491,7 +492,7 @@ void    webserve::Response::_autoInedxCreate(std::string path)
         _response += "Server: webserver\r\n";
         _response += "Content-Type: " + MimeTypes::getType("test.html") +  "\r\n";
         _response += "Content-Length: " + toString(body.length()) + "\r\n";
-        _response += "Connection: " + _request.get("Connection").front() + "\r\n\r\n";
+        _response += "Connection: " + _request.getConnection() + "\r\n\r\n";
         _response += body;
         _response += "\r\n\r\n";
         closedir(dir);
@@ -644,9 +645,14 @@ void    webserve::Response::_deleteDirectory(std::string path)
     struct stat s;
     struct dirent *dirIterator;
     std::string filePath;
+    errno = 0;
     dir = opendir(path.c_str());
     if (!dir)
+    {
+        if (errno == EACCES)
+            return _forbidden();
         return _internalError();
+    }
     std::cout << path << std::endl;
     while ((dirIterator = readdir(dir)) != NULL)
     {
@@ -864,6 +870,7 @@ void    webserve::Response::_proccessPOST(std::string path)
     }
     else if (S_ISDIR(s.st_mode))
     {
+        std::cout << "is a directoty " << std::endl;
         if (path.back() != '/')
             return _redirectTo(301, _constructUri(_request.getUri() + "/"));
         else if (_hasIndexFiles(path))
@@ -940,14 +947,14 @@ void    webserve::Response::process()
         return _requestUriTooLong();
     if (_locationFound && (_location._redirection.first >= 300 && _location._redirection.first <= 307))
         return _redirectTo(_location._redirection.first, _location._redirection.second);
-    if (!_checkAllowedMethod())
-        _unallowedMethod();
+    if (_checkAllowedMethod())
+        return _unallowedMethod();
     if (_request.getMethod() == "GET")
         return _proccessGET(_getPath(_request.getUri()));
     else if (_request.getMethod() == "POST")
-        _proccessPOST(_getPath(_request.getUri()));
+        return _proccessPOST(_getPath(_request.getUri()));
     else if (_request.getMethod() == "DELETE")
-        _proccessDELETE(_getPath(_request.getUri()));
+        return _proccessDELETE(_getPath(_request.getUri()));
     else
         return _notImplemented();
 }

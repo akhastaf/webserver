@@ -137,7 +137,7 @@ void    webserve::Parser::Statment_location(webserve::Location& location)
         Return_statment(location._redirection);
     else if (_lookahead.type == "UPLOAD")
         Upload_statment(location._upload);
-    else if (_lookahead.type == "ALLOWED_METHODS")
+    else if (_lookahead.type == "ALLOWED_METHOD")
         Allowed_methods_statment(location._allowed_methods);
     else if (_lookahead.type == "CGI_PASS")
         Cgi_pass_statment(location._cgi_pass);
@@ -340,6 +340,7 @@ void    webserve::Parser::Allowed_methods_statment(std::vector<std::string>& all
     try
     {
         _eat("ALLOWED_METHOD");
+        allowed_methods.clear();
         while (_lookahead.type == "METHOD")
         {
             allowed_methods.push_back(_eat("METHOD").value);

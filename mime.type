@@ -76,16 +76,6 @@ xpi,application/x-xpinstall
 xhtml,application/xhtml+xml
 xspf,application/xspf+xml
 zip,application/zip
-bin,application/octet-stream
-exe,application/octet-stream
-dll,application/octet-stream
-deb,application/octet-stream
-dmg,application/octet-stream
-iso,application/octet-stream
-img,application/octet-stream
-msi,application/octet-stream
-msp,application/octet-stream
-msm,application/octet-stream
 mid,audio/midi
 midi,audio/midi
 kar,audio/midi

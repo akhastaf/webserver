@@ -247,7 +247,7 @@ std::string webserve::Request::getConnection()
 {
     if (has("Connection"))
         return get("Connection").front();
-    return std::string();
+    return std::string("keep-alive");
 }
 std::string webserve::Request::getQuery()
 {
